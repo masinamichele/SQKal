@@ -13,21 +13,21 @@ This file tracks the implementation progress of our database engine.
 - [x] **Page Structure (`Page`)**
   - [x] Define page header with `rowCount`, `freeSpaceOffset`, and `nextPageId`.
   - [x] Implement a static `initialize` method for new pages.
-  - [x] Implement row insertion logic within a page.
-  - [x] Implement row reading logic from a page.
+  - [x] Refactor to a "Slotted Page" structure with row insertion, deletion, and in-place defragmentation.
 
 - [x] **Higher-Level Abstractions**
   - [x] Create a `Table` class to manage multiple pages.
   - [x] Implement a Catalog to store metadata about tables.
 
+- [x] **Developer Experience**
+  - [x] Make the `Table` class generic (`Table<T>`).
+  - [x] Create a decorator-based `Entity` system for automatic serialization.
+
 ## To Do
 
-- **Developer Experience**
-  - [ ] Make the `Table` class generic to accept a data shape (e.g., `Table<T>`).
-  - [ ] Create a base `Entity` class with `serialize` and `deserialize` methods for easier data modeling.
-
-- **Page Structure Enhancements**
-  - [ ] Refactor `Page` to a "Slotted Page" structure to handle deletions and space reuse efficiently.
+- **Vacuum / Space Reclamation**
+  - [ ] Implement a global free-page list to track and reuse deleted pages.
+  - [ ] Enhance `Table.vacuum()` to merge half-empty pages and return reclaimed pages to the global list.
 
 - **Buffer Management**
   - [ ] Create a `BufferPoolManager` to manage a cache of in-memory pages, reducing disk I/O.

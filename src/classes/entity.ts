@@ -1,7 +1,7 @@
 import { ReflectMetadata } from './reflect-metadata.js';
 import { METADATA_KEY_COLUMNS } from './decorators/keys.js';
 import { Buffer } from 'node:buffer';
-import { uint32 } from '../const.js';
+import { sizeof_uint32 } from '../const.js';
 
 export abstract class Entity {
   static create<T extends Entity>(this: new () => T, data: Omit<Partial<T>, 'serialize'>) {
@@ -19,14 +19,14 @@ export abstract class Entity {
       const value = (this as any)[col.propertyKey];
       switch (col.type) {
         case 'number': {
-          const numBuffer = Buffer.alloc(uint32);
+          const numBuffer = Buffer.alloc(sizeof_uint32);
           numBuffer.writeUint32BE(value);
           chunks.push(numBuffer);
           break;
         }
         case 'string': {
           const strBuffer = Buffer.from(value, 'utf8');
-          const strLength = Buffer.alloc(uint32);
+          const strLength = Buffer.alloc(sizeof_uint32);
           strLength.writeUint32BE(strBuffer.length);
           chunks.push(strLength, strBuffer);
           break;
@@ -45,12 +45,12 @@ export abstract class Entity {
         switch (col.type) {
           case 'number': {
             data[col.propertyKey] = buffer.readUint32BE(offset);
-            offset += uint32;
+            offset += sizeof_uint32;
             break;
           }
           case 'string': {
             const len = buffer.readUint32BE(offset);
-            offset += uint32;
+            offset += sizeof_uint32;
             data[col.propertyKey] = buffer.toString('utf8', offset, offset + len);
             offset += len;
             break;

@@ -26,7 +26,28 @@ try {
 
   console.log();
   console.log('Scanning all users:');
-  const allUsers = await usersTable.select();
+  let allUsers = await usersTable.select();
+  if (allUsers.length) {
+    for (const user of allUsers) {
+      console.log(`User ${user.id}: ${user.name}`);
+    }
+  } else console.log('No users found');
+
+  console.log();
+  console.log('Deleting user with ID 2 (should succeed)');
+  let deleted = await usersTable.delete(User.create({ id: 2, name: 'Bob' }));
+  if (deleted) console.log('Deletion successful.');
+  else console.log('User to delete was not found.');
+
+  console.log();
+  console.log('Deleting user with ID 4 (should fail)');
+  deleted = await usersTable.delete(User.create({ id: 4, name: 'Donkey' }));
+  if (deleted) console.log('Deletion successful.');
+  else console.log('User to delete was not found.');
+
+  console.log();
+  console.log('Scanning all users:');
+  allUsers = await usersTable.select();
   if (allUsers.length) {
     for (const user of allUsers) {
       console.log(`User ${user.id}: ${user.name}`);

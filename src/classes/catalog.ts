@@ -1,6 +1,6 @@
 import { DiskManager } from './disk-manager.js';
 import { Buffer } from 'node:buffer';
-import { CATALOG, uint32 } from '../const.js';
+import { CATALOG, sizeof_uint32 } from '../const.js';
 import { Page } from './page.js';
 import { Table } from './table.js';
 import { Entity } from './entity.js';
@@ -19,9 +19,9 @@ export class Catalog {
     for (let i = 0; i < catalogPage.rowCount; i++) {
       const row = catalogPage.getRow(i);
       const nameLength = row.readUint32BE(0);
-      const name = row.toString('utf8', uint32, uint32 + nameLength);
+      const name = row.toString('utf8', sizeof_uint32, sizeof_uint32 + nameLength);
       if (name === tableName) {
-        const pageId = row.readUint32BE(uint32 + nameLength);
+        const pageId = row.readUint32BE(sizeof_uint32 + nameLength);
         return new Table<T>(this.diskManager, pageId, tableName);
       }
     }
@@ -39,10 +39,10 @@ export class Catalog {
 
     const nameBuffer = Buffer.from(tableName, 'utf8');
     const nameLength = nameBuffer.length;
-    const catalogRow = Buffer.alloc(uint32 + nameLength + uint32);
+    const catalogRow = Buffer.alloc(sizeof_uint32 + nameLength + sizeof_uint32);
     catalogRow.writeUint32BE(nameLength, 0);
-    nameBuffer.copy(catalogRow, uint32);
-    catalogRow.writeUint32BE(pageId, uint32 + nameLength);
+    nameBuffer.copy(catalogRow, sizeof_uint32);
+    catalogRow.writeUint32BE(pageId, sizeof_uint32 + nameLength);
 
     const catalogBuffer = await this.diskManager.readPage(CATALOG);
     const catalogPage = new Page(catalogBuffer, CATALOG);

@@ -46,15 +46,32 @@ export class Table<T extends Entity> {
     }
   }
 
-  async *scan() {
+  private async *scanWithLocation() {
     let id = this.firstPageId;
     while (id !== LAST_PAGE_ID) {
       const pageBuffer = await this.diskManager.readPage(id);
       const page = new Page(pageBuffer, id);
       for (let i = 0; i < page.rowCount; i++) {
         const buffer = page.getRow(i);
-        yield this.entityClass.deserialize(buffer);
+        yield { buffer, pageId: id, rowIndex: i };
       }
+      id = page.nextPageId;
+    }
+  }
+
+  async *scan() {
+    for await (const { buffer } of this.scanWithLocation()) {
+      yield this.entityClass.deserialize(buffer);
+    }
+  }
+
+  async vacuum() {
+    let id = this.firstPageId;
+    while (id !== LAST_PAGE_ID) {
+      const pageBuffer = await this.diskManager.readPage(id);
+      const page = new Page(pageBuffer, id);
+      page.defragment();
+      await this.diskManager.writePage(page.id, page.getBuffer());
       id = page.nextPageId;
     }
   }
@@ -65,5 +82,19 @@ export class Table<T extends Entity> {
       rows.push(row);
     }
     return rows;
+  }
+
+  async delete(entity: T) {
+    const targetBuffer = entity.serialize();
+    for await (const { buffer, rowIndex, pageId } of this.scanWithLocation()) {
+      if (targetBuffer.equals(buffer)) {
+        const pageBuffer = await this.diskManager.readPage(pageId);
+        const page = new Page(pageBuffer, pageId);
+        page.deleteRow(rowIndex);
+        await this.diskManager.writePage(pageId, page.getBuffer());
+        return true;
+      }
+    }
+    return false;
   }
 }
