@@ -10,7 +10,8 @@ export class Catalog {
 
   async initialize(buffer: Buffer) {
     Page.initialize(buffer, CATALOG);
-    this.bufferPoolManager.unpin(CATALOG, true);
+    await this.bufferPoolManager.flushPage(CATALOG);
+    this.bufferPoolManager.unpin(CATALOG, false);
   }
 
   async getTable<T extends Entity>(tableName: string) {
@@ -37,7 +38,9 @@ export class Catalog {
 
     const { pageId, buffer } = await this.bufferPoolManager.newPage();
     Page.initialize(buffer, pageId);
-    this.bufferPoolManager.unpin(pageId, true);
+
+    await this.bufferPoolManager.flushPage(pageId);
+    this.bufferPoolManager.unpin(pageId, false);
 
     const nameBuffer = Buffer.from(tableName, 'utf8');
     const nameLength = nameBuffer.length;

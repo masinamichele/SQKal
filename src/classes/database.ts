@@ -3,16 +3,21 @@ import { Catalog } from './catalog.js';
 import { BUFFER_POOL_SIZE, CATALOG } from '../const.js';
 import { Entity } from './entity.js';
 import { BufferPoolManager } from './buffer-pool-manager.js';
+import { QueryParser, QueryRunner } from './query.js';
 
 export class Database {
   private readonly diskManager: DiskManager;
   private readonly bufferPoolManager: BufferPoolManager;
   private readonly catalog: Catalog;
+  private readonly queryParser: QueryParser;
+  private readonly queryRunner: QueryRunner;
 
   constructor(private readonly path: string) {
     this.diskManager = new DiskManager(this.path);
     this.bufferPoolManager = new BufferPoolManager(this.diskManager, BUFFER_POOL_SIZE);
     this.catalog = new Catalog(this.bufferPoolManager);
+    this.queryParser = new QueryParser();
+    this.queryRunner = new QueryRunner(this);
   }
 
   async open() {
@@ -37,5 +42,13 @@ export class Database {
 
   async getTable<T extends Entity>(tableName: string) {
     return this.catalog.getTable<T>(tableName);
+  }
+
+  async query(query: string) {
+    const command = this.queryParser.parse(query);
+    if (!command) {
+      throw new Error(`Invalid query: '${query}'`);
+    }
+    return this.queryRunner.run(command);
   }
 }

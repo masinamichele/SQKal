@@ -22,6 +22,45 @@ export class BufferPoolManager {
     }
   }
 
+  private async findVictimFrame() {
+    if (this.freeList.length > 0) {
+      return this.freeList.pop();
+    }
+
+    let victimFrameId: number = null;
+    for (const frameId of this.lruReplacer.reverseValues()) {
+      if (this.pinCount.get(frameId) === 0) {
+        victimFrameId = frameId;
+        break;
+      }
+    }
+
+    if (victimFrameId == null) return null;
+
+    if (this.frameToPage.has(victimFrameId)) {
+      const evictedPageId = this.frameToPage.get(victimFrameId);
+      if (this.isDirty.get(victimFrameId)) {
+        await this.diskManager.writePage(evictedPageId, this.pool[victimFrameId]);
+      }
+
+      this.pageToFrame.delete(evictedPageId);
+      this.frameToPage.delete(victimFrameId);
+      this.pinCount.delete(victimFrameId);
+      this.isDirty.delete(victimFrameId);
+      this.lruReplacer.remove(this.lruReplacer.getNode(victimFrameId));
+    }
+
+    return victimFrameId;
+  }
+
+  private setupFrameMetadata(pageId: number, frameId: number) {
+    this.pinCount.set(frameId, 1);
+    this.isDirty.set(frameId, false);
+    this.pageToFrame.set(pageId, frameId);
+    this.frameToPage.set(frameId, pageId);
+    this.lruReplacer.insertAtHead(frameId);
+  }
+
   async fetchPage(pageId: number) {
     if (this.pageToFrame.has(pageId)) {
       const frameId = this.pageToFrame.get(pageId);
@@ -31,39 +70,11 @@ export class BufferPoolManager {
       return this.pool[frameId];
     }
 
-    let frameId: number;
-    if (this.freeList.length > 0) {
-      frameId = this.freeList.pop();
-    } else {
-      for (const fid of this.lruReplacer.reverseValues()) {
-        if (this.pinCount.get(fid) === 0) {
-          frameId = fid;
-          break;
-        }
-      }
-
-      if (frameId == null) return null;
-
-      if (this.frameToPage.has(frameId)) {
-        const evictedPageId = this.frameToPage.get(frameId);
-        if (this.isDirty.get(frameId)) {
-          await this.diskManager.writePage(evictedPageId, this.pool[frameId]);
-        }
-
-        this.pageToFrame.delete(evictedPageId);
-        this.frameToPage.delete(frameId);
-        this.pinCount.delete(frameId);
-        this.isDirty.delete(frameId);
-        this.lruReplacer.remove(this.lruReplacer.getNode(frameId));
-      }
-    }
+    const frameId = await this.findVictimFrame();
 
     await this.diskManager.readPage(pageId, this.pool[frameId]);
-    this.pinCount.set(frameId, 1);
-    this.isDirty.set(frameId, false);
-    this.pageToFrame.set(pageId, frameId);
-    this.frameToPage.set(frameId, pageId);
-    this.lruReplacer.insertAtHead(frameId);
+    this.setupFrameMetadata(pageId, frameId);
+
     return this.pool[frameId];
   }
 
@@ -78,9 +89,19 @@ export class BufferPoolManager {
 
   async newPage() {
     const { pageId } = await this.diskManager.allocatePage();
-    const pageBuffer = await this.fetchPage(pageId);
-    if (pageBuffer == null) return null;
+    const frameId = await this.findVictimFrame();
+    if (frameId == null) return null;
+    const pageBuffer = this.pool[frameId];
+    pageBuffer.fill(0);
+    this.setupFrameMetadata(pageId, frameId);
     return { pageId, buffer: pageBuffer };
+  }
+
+  async flushPage(pageId: number) {
+    if (!this.pageToFrame.has(pageId)) return;
+    const frameId = this.pageToFrame.get(pageId);
+    await this.diskManager.writePage(pageId, this.pool[frameId]);
+    this.isDirty.set(frameId, false);
   }
 
   async flush() {

@@ -23,22 +23,30 @@ This file tracks the implementation progress of our database engine.
   - [x] Make the `Table` class generic (`Table<T>`).
   - [x] Create a decorator-based `Entity` system for automatic serialization.
 
+- [x] **Buffer Management**
+  - [x] Create a `DoublyLinkedList` for the LRU replacer.
+  - [x] Implement `fetchPage` in `BufferPoolManager` with LRU eviction logic.
+  - [x] Track "dirty" pages (modified pages) and write them to disk before eviction.
+  - [x] Implement page "pinning" to prevent active pages from being evicted.
+  - [x] Refactor `Table`, `Catalog`, etc. to use the `BufferPoolManager`.
+
+- [x] **Query Engine**
+  - [x] Design and implement a simple query language parser for `INSERT`.
+
 ## To Do
 
-- **Buffer Management**
-  - [ ] Create a `DoublyLinkedList` for the LRU replacer.
-  - [ ] Implement `fetchPage` in `BufferPoolManager` with LRU eviction logic.
-  - [ ] Track "dirty" pages (modified pages) and write them to disk before eviction.
-  - [ ] Implement page "pinning" to prevent active pages from being evicted.
-  - [ ] Refactor `Table`, `Catalog`, etc. to use the `BufferPoolManager` instead of the `DiskManager`.
+- **Architecture**
+  - [ ] Implement a custom, numbered error system.
+  - [ ] Implement a Dependency Injection (DI) container to manage services.
 
 - **Vacuum / Space Reclamation**
   - [ ] Implement a global free-page list to track and reuse deleted pages.
   - [ ] Enhance `Table.vacuum()` to merge half-empty pages and return reclaimed pages to the global list.
 
 - **Query Engine**
-  - [ ] Design and implement a simple query language parser (e.g., for `SELECT`, `INSERT`).
-  - [ ] Create a query planner and executor.
+  - [ ] Implement a query executor (`QueryRunner`).
+  - [ ] Extend the parser and executor to support `SELECT` queries.
+  - [ ] Create a query planner.
 
 - **Advanced Features**
   - [ ] Implement data compression for rows.

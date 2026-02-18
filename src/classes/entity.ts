@@ -3,6 +3,12 @@ import { METADATA_KEY_COLUMNS } from './decorators/keys.js';
 import { Buffer } from 'node:buffer';
 import { sizeof_uint32 } from '../const.js';
 
+export interface EntityType<T extends Entity> {
+  new (): T;
+  create(data: Omit<Partial<T>, 'serialize'>): T;
+  deserialize(buffer: Buffer): T;
+}
+
 export abstract class Entity {
   static create<T extends Entity>(this: new () => T, data: Omit<Partial<T>, 'serialize'>) {
     const entity = new this();

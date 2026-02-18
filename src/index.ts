@@ -19,9 +19,9 @@ try {
     usersTable = await db.createTable<User>('users');
 
     console.log('Inserting sample data...');
-    await usersTable.insert(User.create({ id: 1, name: 'Alice' }));
-    await usersTable.insert(User.create({ id: 2, name: 'Bob' }));
-    await usersTable.insert(User.create({ id: 3, name: 'Charlie' }));
+    await db.query("INSERT INTO users VALUES (1, 'Alice')");
+    await db.query("INSERT INTO users VALUES (2, 'Bob')");
+    await db.query("INSERT INTO users VALUES (3, 'Charlie')");
   }
 
   console.log();

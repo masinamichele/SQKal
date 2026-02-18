@@ -1,12 +1,12 @@
 import { Buffer } from 'node:buffer';
 import { LAST_PAGE_ID } from '../const.js';
 import { Page } from './page.js';
-import { Entity } from './entity.js';
+import { Entity, EntityType } from './entity.js';
 import { getEntityClass } from './decorators/registry.js';
 import { BufferPoolManager } from './buffer-pool-manager.js';
 
 export class Table<T extends Entity> {
-  private readonly entityClass: { new (...data: any[]): T; deserialize: (buffer: Buffer) => T };
+  private readonly entityClass: EntityType<T>;
 
   constructor(
     private readonly bufferPoolManager: BufferPoolManager,
@@ -18,6 +18,10 @@ export class Table<T extends Entity> {
       throw new Error(`No entity model has been registered for table '${this.name}'`);
     }
     this.entityClass = entityClass as any;
+  }
+
+  getEntityClass() {
+    return this.entityClass;
   }
 
   async insert(entity: T) {
