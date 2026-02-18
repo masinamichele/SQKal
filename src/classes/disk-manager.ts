@@ -47,8 +47,7 @@ export class DiskManager {
     await this.log(`[W] Page ${id}`);
   }
 
-  async readPage(id: number) {
-    const buffer = Buffer.alloc(PAGE_SIZE);
+  async readPage(id: number, buffer: Buffer = Buffer.alloc(PAGE_SIZE)) {
     const offset = id * PAGE_SIZE;
     await this.handle.read(buffer, 0, PAGE_SIZE, offset);
     await this.log(`[R] Page ${id}`);

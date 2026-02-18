@@ -1,21 +1,24 @@
 import { DiskManager } from './disk-manager.js';
 import { Catalog } from './catalog.js';
-import { CATALOG } from '../const.js';
+import { BUFFER_POOL_SIZE, CATALOG } from '../const.js';
 import { Entity } from './entity.js';
+import { BufferPoolManager } from './buffer-pool-manager.js';
 
 export class Database {
   private readonly diskManager: DiskManager;
+  private readonly bufferPoolManager: BufferPoolManager;
   private readonly catalog: Catalog;
 
   constructor(private readonly path: string) {
-    this.diskManager = new DiskManager(path);
-    this.catalog = new Catalog(this.diskManager);
+    this.diskManager = new DiskManager(this.path);
+    this.bufferPoolManager = new BufferPoolManager(this.diskManager, BUFFER_POOL_SIZE);
+    this.catalog = new Catalog(this.bufferPoolManager);
   }
 
   async open() {
     await this.diskManager.open();
     if ((await this.diskManager.size()) === 0) {
-      const { pageId, buffer } = await this.diskManager.allocatePage();
+      const { pageId, buffer } = await this.bufferPoolManager.newPage();
       if (pageId !== CATALOG) {
         throw new Error(`Database initialization failed: first page was ${pageId} instead of ${CATALOG}`);
       }
@@ -24,6 +27,7 @@ export class Database {
   }
 
   async close() {
+    await this.bufferPoolManager.flush();
     await this.diskManager.close();
   }
 

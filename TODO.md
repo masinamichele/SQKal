@@ -25,12 +25,16 @@ This file tracks the implementation progress of our database engine.
 
 ## To Do
 
+- **Buffer Management**
+  - [ ] Create a `DoublyLinkedList` for the LRU replacer.
+  - [ ] Implement `fetchPage` in `BufferPoolManager` with LRU eviction logic.
+  - [ ] Track "dirty" pages (modified pages) and write them to disk before eviction.
+  - [ ] Implement page "pinning" to prevent active pages from being evicted.
+  - [ ] Refactor `Table`, `Catalog`, etc. to use the `BufferPoolManager` instead of the `DiskManager`.
+
 - **Vacuum / Space Reclamation**
   - [ ] Implement a global free-page list to track and reuse deleted pages.
   - [ ] Enhance `Table.vacuum()` to merge half-empty pages and return reclaimed pages to the global list.
-
-- **Buffer Management**
-  - [ ] Create a `BufferPoolManager` to manage a cache of in-memory pages, reducing disk I/O.
 
 - **Query Engine**
   - [ ] Design and implement a simple query language parser (e.g., for `SELECT`, `INSERT`).

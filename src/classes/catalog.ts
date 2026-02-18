@@ -1,30 +1,32 @@
-import { DiskManager } from './disk-manager.js';
 import { Buffer } from 'node:buffer';
 import { CATALOG, sizeof_uint32 } from '../const.js';
 import { Page } from './page.js';
 import { Table } from './table.js';
 import { Entity } from './entity.js';
+import { BufferPoolManager } from './buffer-pool-manager.js';
 
 export class Catalog {
-  constructor(private readonly diskManager: DiskManager) {}
+  constructor(private readonly bufferPoolManager: BufferPoolManager) {}
 
   async initialize(buffer: Buffer) {
-    const page = Page.initialize(buffer, CATALOG);
-    await this.diskManager.writePage(CATALOG, page.getBuffer());
+    Page.initialize(buffer, CATALOG);
+    this.bufferPoolManager.unpin(CATALOG, true);
   }
 
   async getTable<T extends Entity>(tableName: string) {
-    const catalogBuffer = await this.diskManager.readPage(CATALOG);
+    const catalogBuffer = await this.bufferPoolManager.fetchPage(CATALOG);
     const catalogPage = new Page(catalogBuffer, CATALOG);
     for (let i = 0; i < catalogPage.rowCount; i++) {
       const row = catalogPage.getRow(i);
       const nameLength = row.readUint32BE(0);
       const name = row.toString('utf8', sizeof_uint32, sizeof_uint32 + nameLength);
       if (name === tableName) {
+        this.bufferPoolManager.unpin(CATALOG, false);
         const pageId = row.readUint32BE(sizeof_uint32 + nameLength);
-        return new Table<T>(this.diskManager, pageId, tableName);
+        return new Table<T>(this.bufferPoolManager, pageId, tableName);
       }
     }
+    this.bufferPoolManager.unpin(CATALOG, false);
     return null;
   }
 
@@ -33,9 +35,9 @@ export class Catalog {
       throw new Error(`Table '${tableName}' already exists`);
     }
 
-    const { pageId, buffer } = await this.diskManager.allocatePage();
-    const page = Page.initialize(buffer, pageId);
-    await this.diskManager.writePage(pageId, page.getBuffer());
+    const { pageId, buffer } = await this.bufferPoolManager.newPage();
+    Page.initialize(buffer, pageId);
+    this.bufferPoolManager.unpin(pageId, true);
 
     const nameBuffer = Buffer.from(tableName, 'utf8');
     const nameLength = nameBuffer.length;
@@ -44,11 +46,11 @@ export class Catalog {
     nameBuffer.copy(catalogRow, sizeof_uint32);
     catalogRow.writeUint32BE(pageId, sizeof_uint32 + nameLength);
 
-    const catalogBuffer = await this.diskManager.readPage(CATALOG);
+    const catalogBuffer = await this.bufferPoolManager.fetchPage(CATALOG);
     const catalogPage = new Page(catalogBuffer, CATALOG);
     catalogPage.insertRow(catalogRow);
-    await this.diskManager.writePage(CATALOG, catalogPage.getBuffer());
+    this.bufferPoolManager.unpin(CATALOG, true);
 
-    return new Table<T>(this.diskManager, pageId, tableName);
+    return new Table<T>(this.bufferPoolManager, pageId, tableName);
   }
 }
