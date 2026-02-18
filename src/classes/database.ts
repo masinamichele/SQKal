@@ -1,6 +1,7 @@
 import { DiskManager } from './disk-manager.js';
 import { Catalog } from './catalog.js';
 import { CATALOG } from '../const.js';
+import { Entity } from './entity.js';
 
 export class Database {
   private readonly diskManager: DiskManager;
@@ -26,11 +27,11 @@ export class Database {
     await this.diskManager.close();
   }
 
-  async createTable(tableName: string) {
-    return this.catalog.createTable(tableName);
+  async createTable<T extends Entity>(tableName: string) {
+    return this.catalog.createTable<T>(tableName);
   }
 
-  async getTable(tableName: string) {
-    return this.catalog.getTable(tableName);
+  async getTable<T extends Entity>(tableName: string) {
+    return this.catalog.getTable<T>(tableName);
   }
 }

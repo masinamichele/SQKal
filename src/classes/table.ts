@@ -2,14 +2,26 @@ import { DiskManager } from './disk-manager.js';
 import { Buffer } from 'node:buffer';
 import { LAST_PAGE_ID } from '../const.js';
 import { Page } from './page.js';
+import { Entity } from './entity.js';
+import { getEntityClass } from './decorators/registry.js';
 
-export class Table {
+export class Table<T extends Entity> {
+  private readonly entityClass: { new (...data: any[]): T; deserialize: (buffer: Buffer) => T };
+
   constructor(
     private readonly diskManager: DiskManager,
     private readonly firstPageId: number,
-  ) {}
+    private readonly name: string,
+  ) {
+    const entityClass = getEntityClass(this.name);
+    if (!entityClass) {
+      throw new Error(`No entity model has been registered for table '${this.name}'`);
+    }
+    this.entityClass = entityClass as any;
+  }
 
-  async insert(row: Buffer) {
+  async insert(entity: T) {
+    const row = entity.serialize();
     let currentPageId = this.firstPageId;
     while (true) {
       const pageBuffer = await this.diskManager.readPage(currentPageId);
@@ -40,14 +52,15 @@ export class Table {
       const pageBuffer = await this.diskManager.readPage(id);
       const page = new Page(pageBuffer, id);
       for (let i = 0; i < page.rowCount; i++) {
-        yield page.getRow(i);
+        const buffer = page.getRow(i);
+        yield this.entityClass.deserialize(buffer);
       }
       id = page.nextPageId;
     }
   }
 
   async select() {
-    const rows: Buffer[] = [];
+    const rows: T[] = [];
     for await (const row of this.scan()) {
       rows.push(row);
     }

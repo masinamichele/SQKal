@@ -3,6 +3,7 @@ import { Buffer } from 'node:buffer';
 import { CATALOG, uint32 } from '../const.js';
 import { Page } from './page.js';
 import { Table } from './table.js';
+import { Entity } from './entity.js';
 
 export class Catalog {
   constructor(private readonly diskManager: DiskManager) {}
@@ -12,7 +13,7 @@ export class Catalog {
     await this.diskManager.writePage(CATALOG, page.getBuffer());
   }
 
-  async getTable(tableName: string) {
+  async getTable<T extends Entity>(tableName: string) {
     const catalogBuffer = await this.diskManager.readPage(CATALOG);
     const catalogPage = new Page(catalogBuffer, CATALOG);
     for (let i = 0; i < catalogPage.rowCount; i++) {
@@ -21,13 +22,13 @@ export class Catalog {
       const name = row.toString('utf8', uint32, uint32 + nameLength);
       if (name === tableName) {
         const pageId = row.readUint32BE(uint32 + nameLength);
-        return new Table(this.diskManager, pageId);
+        return new Table<T>(this.diskManager, pageId, tableName);
       }
     }
     return null;
   }
 
-  async createTable(tableName: string) {
+  async createTable<T extends Entity>(tableName: string) {
     if ((await this.getTable(tableName)) !== null) {
       throw new Error(`Table '${tableName}' already exists`);
     }
@@ -48,6 +49,6 @@ export class Catalog {
     catalogPage.insertRow(catalogRow);
     await this.diskManager.writePage(CATALOG, catalogPage.getBuffer());
 
-    return new Table(this.diskManager, pageId);
+    return new Table<T>(this.diskManager, pageId, tableName);
   }
 }
