@@ -59,7 +59,7 @@ try {
   console.log(updatedUser);
 
   console.log();
-  console.log('Finding specific user:');
+  console.log('Finding specific users:');
   const users = await db.query('SELECT * FROM users WHERE id >= 1');
   console.log(users);
 } finally {

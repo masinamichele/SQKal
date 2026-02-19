@@ -102,7 +102,7 @@ export class Page {
     const tempPage = Page.initialize(tempBuffer, this.id);
     tempPage.nextPageId = this.nextPageId;
 
-    for (let i = 0; i < this.rowCount; i++) {
+    for (let i = this.rowCount - 1; i >= 0; i--) {
       const row = this.getRow(i);
       if (row) tempPage.insertRow(row);
     }
