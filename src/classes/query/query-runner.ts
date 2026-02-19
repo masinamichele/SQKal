@@ -111,8 +111,8 @@ export class QueryRunner {
       return acc;
     }, {});
 
-    const entries: [number, number[]][] = Object.entries(deletionByPage) as any;
-    for (const [pageId, rowIndices] of entries) {
+    for (const [pageIdString, rowIndices] of Object.entries(deletionByPage)) {
+      const pageId = Number(pageIdString);
       const pageBuffer = await this.bufferPoolManager.fetchPage(pageId);
       if (!pageBuffer) continue;
       const page = new Page(pageBuffer, pageId);
