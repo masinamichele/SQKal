@@ -31,7 +31,9 @@ This file tracks the implementation progress of our database engine.
   - [x] Refactor `Table`, `Catalog`, etc. to use the `BufferPoolManager`.
 
 - [x] **Query Engine**
-  - [x] Design and implement a simple query language parser for `INSERT`.
+  - [x] Refactor parser to be a two-stage (tokenizer/parser) process.
+  - [x] Implement `INSERT` and `SELECT` (with projection) commands.
+  - [x] Implement simple `WHERE` clause support (`=`).
 
 ## To Do
 
@@ -39,14 +41,15 @@ This file tracks the implementation progress of our database engine.
   - [ ] Implement a custom, numbered error system.
   - [ ] Implement a Dependency Injection (DI) container to manage services.
 
+- **Query Engine**
+  - [ ] Implement `DELETE` command.
+  - [ ] Expand `WHERE` clause support (`>`, `<`, `AND`, `OR`).
+  - [ ] Implement `CREATE TABLE` command for schema management via SQL.
+  - [ ] Create a query planner.
+
 - **Vacuum / Space Reclamation**
   - [ ] Implement a global free-page list to track and reuse deleted pages.
   - [ ] Enhance `Table.vacuum()` to merge half-empty pages and return reclaimed pages to the global list.
-
-- **Query Engine**
-  - [ ] Implement a query executor (`QueryRunner`).
-  - [ ] Extend the parser and executor to support `SELECT` queries.
-  - [ ] Create a query planner.
 
 - **Advanced Features**
   - [ ] Implement data compression for rows.

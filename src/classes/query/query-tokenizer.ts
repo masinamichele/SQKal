@@ -1,7 +1,7 @@
-import { Token } from './types.js';
+import { Token } from './query-types.js';
 
 const TOKEN_REGEX: Record<Token['type'], RegExp> = {
-  KEYWORD: /^(SELECT|INSERT INTO|VALUES|FROM|WHERE)\b/i,
+  KEYWORD: /^(SELECT|INSERT INTO|VALUES|FROM|WHERE|DELETE FROM|CREATE TABLE|INT|VARCHAR)\b/i,
   NUMBER: /^\d+/,
   STRING: /^'[^']*'/,
   IDENTIFIER: /^\w+/i,

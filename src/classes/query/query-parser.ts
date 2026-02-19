@@ -1,5 +1,14 @@
-import { Command, InsertCommand, SelectCommand, Token, WhereClause } from './types.js';
+import {
+  Command,
+  CreateTableCommand,
+  DeleteCommand,
+  InsertCommand,
+  SelectCommand,
+  Token,
+  WhereClause,
+} from './query-types.js';
 import { QueryTokenizer } from './query-tokenizer.js';
+import { Column, DataType, Schema } from '../catalog.js';
 
 export class QueryParser {
   tokens: Token[] = [];
@@ -36,6 +45,10 @@ export class QueryParser {
           return this.parseInsertStatement();
         case 'SELECT':
           return this.parseSelectStatement();
+        case 'DELETE FROM':
+          return this.parseDeleteStatement();
+        case 'CREATE TABLE':
+          return this.parseCreateTableStatement();
       }
     }
   }
@@ -75,6 +88,24 @@ export class QueryParser {
     } while (true);
 
     return values;
+  }
+
+  private parseColumnDefinition(): Column {
+    const name = this.consume('IDENTIFIER').value;
+    const typeToken = this.consume('KEYWORD').value;
+
+    let type: DataType;
+    switch (typeToken.toUpperCase()) {
+      case 'INT':
+        type = DataType.NUMBER;
+        break;
+      case 'VARCHAR':
+        type = DataType.STRING;
+        break;
+      default:
+        throw new Error(`Unknown column type: ${typeToken}`);
+    }
+    return { name, type };
   }
 
   private parseWhereClause(): WhereClause {
@@ -117,5 +148,30 @@ export class QueryParser {
     }
 
     return { type: 'SELECT', tableName, fields, where };
+  }
+
+  private parseDeleteStatement(): DeleteCommand {
+    this.consume('KEYWORD', 'DELETE FROM');
+    const tableName = this.consume('IDENTIFIER').value;
+    const where = this.parseWhereClause();
+    return { type: 'DELETE', tableName, where };
+  }
+
+  private parseCreateTableStatement(): CreateTableCommand {
+    this.consume('KEYWORD', 'CREATE TABLE');
+    const tableName = this.consume('IDENTIFIER').value;
+    this.consume('PUNCTUATION', '(');
+
+    const schema: Schema = [];
+    do {
+      schema.push(this.parseColumnDefinition());
+      if (this.peek()?.value === ',') {
+        this.consume('PUNCTUATION', ',');
+      } else break;
+    } while (true);
+
+    this.consume('PUNCTUATION', ')');
+
+    return { type: 'CREATE_TABLE', tableName, schema };
   }
 }

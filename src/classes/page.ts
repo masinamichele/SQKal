@@ -1,5 +1,5 @@
 import { Buffer } from 'node:buffer';
-import { HEADER_SIZE, LAST_PAGE_ID, PAGE_SIZE, sizeof_uint32, SLOT_SIZE } from '../const.js';
+import { PAGE_HEADER_SIZE, LAST_PAGE_ID, PAGE_SIZE, sizeof_uint32, PAGE_SLOT_SIZE } from '../const.js';
 
 export class Page {
   constructor(
@@ -41,14 +41,14 @@ export class Page {
   }
 
   private getSlot(index: number) {
-    const slotOffset = HEADER_SIZE + index * SLOT_SIZE;
+    const slotOffset = PAGE_HEADER_SIZE + index * PAGE_SLOT_SIZE;
     const offset = this.buffer.readUint32BE(slotOffset);
     const length = this.buffer.readUint32BE(slotOffset + sizeof_uint32);
     return { offset, length };
   }
 
   private setSlot(index: number, offset: number, length: number) {
-    const slotOffset = HEADER_SIZE + index * SLOT_SIZE;
+    const slotOffset = PAGE_HEADER_SIZE + index * PAGE_SLOT_SIZE;
     this.buffer.writeUint32BE(offset, slotOffset);
     this.buffer.writeUint32BE(length, slotOffset + sizeof_uint32);
   }
@@ -56,13 +56,13 @@ export class Page {
   insertRow(row: Buffer) {
     const size = row.length;
 
-    const maxRowSize = PAGE_SIZE - HEADER_SIZE - SLOT_SIZE;
+    const maxRowSize = PAGE_SIZE - PAGE_HEADER_SIZE - PAGE_SLOT_SIZE;
     if (size > maxRowSize) {
       throw new RangeError(`Row of size ${size} exceeds the maximum allowed size of ${maxRowSize}`);
     }
 
-    const requiredSpace = size + SLOT_SIZE;
-    const endOfSlots = HEADER_SIZE + this.rowCount * SLOT_SIZE;
+    const requiredSpace = size + PAGE_SLOT_SIZE;
+    const endOfSlots = PAGE_HEADER_SIZE + this.rowCount * PAGE_SLOT_SIZE;
 
     if (requiredSpace > this.freeSpacePointer - endOfSlots) {
       return null;

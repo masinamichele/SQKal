@@ -1,31 +1,15 @@
 import { Buffer } from 'node:buffer';
 import { LAST_PAGE_ID } from '../const.js';
 import { Page } from './page.js';
-import { Entity, EntityType } from './entity.js';
-import { getEntityClass } from './decorators/registry.js';
 import { BufferPoolManager } from './buffer-pool-manager.js';
 
-export class Table<T extends Entity> {
-  private readonly entityClass: EntityType<T>;
-
+export class Table {
   constructor(
     private readonly bufferPoolManager: BufferPoolManager,
     private readonly firstPageId: number,
-    private readonly name: string,
-  ) {
-    const entityClass = getEntityClass(this.name);
-    if (!entityClass) {
-      throw new Error(`No entity model has been registered for table '${this.name}'`);
-    }
-    this.entityClass = entityClass as any;
-  }
+  ) {}
 
-  getEntityClass() {
-    return this.entityClass;
-  }
-
-  async insert(entity: T) {
-    const row = entity.serialize();
+  async insert(row: Buffer) {
     let currentPageId = this.firstPageId;
     while (true) {
       const pageBuffer = await this.bufferPoolManager.fetchPage(currentPageId);
@@ -50,7 +34,7 @@ export class Table<T extends Entity> {
     }
   }
 
-  private async *scanWithLocation() {
+  async *scanWithLocation() {
     let id = this.firstPageId;
     while (id !== LAST_PAGE_ID) {
       const pageBuffer = await this.bufferPoolManager.fetchPage(id);
@@ -69,7 +53,7 @@ export class Table<T extends Entity> {
 
   async *scan() {
     for await (const { buffer } of this.scanWithLocation()) {
-      yield this.entityClass.deserialize(buffer);
+      yield buffer;
     }
   }
 
@@ -85,17 +69,16 @@ export class Table<T extends Entity> {
   }
 
   async select() {
-    const rows: T[] = [];
+    const rows: Buffer[] = [];
     for await (const row of this.scan()) {
       rows.push(row);
     }
     return rows;
   }
 
-  async delete(entity: T) {
-    const targetBuffer = entity.serialize();
+  async delete(row: Buffer) {
     for await (const { buffer, rowIndex, pageId } of this.scanWithLocation()) {
-      if (targetBuffer.equals(buffer)) {
+      if (row.equals(buffer)) {
         const pageBuffer = await this.bufferPoolManager.fetchPage(pageId);
         const page = new Page(pageBuffer, pageId);
         page.deleteRow(rowIndex);

@@ -1,3 +1,5 @@
+import { Schema } from '../catalog.js';
+
 export interface WhereClause {
   field: string;
   operator: string;
@@ -17,7 +19,19 @@ export interface SelectCommand {
   where?: WhereClause;
 }
 
-export type Command = InsertCommand | SelectCommand;
+export interface CreateTableCommand {
+  type: 'CREATE_TABLE';
+  tableName: string;
+  schema: Schema;
+}
+
+export interface DeleteCommand {
+  type: 'DELETE';
+  tableName: string;
+  where: WhereClause;
+}
+
+export type Command = InsertCommand | SelectCommand | DeleteCommand | CreateTableCommand;
 
 export interface Token {
   type: 'KEYWORD' | 'IDENTIFIER' | 'NUMBER' | 'STRING' | 'OPERATOR' | 'PUNCTUATION';

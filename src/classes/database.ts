@@ -1,7 +1,6 @@
 import { DiskManager } from './disk-manager.js';
-import { Catalog } from './catalog.js';
+import { Catalog, Schema } from './catalog.js';
 import { BUFFER_POOL_SIZE, CATALOG } from '../const.js';
-import { Entity } from './entity.js';
 import { BufferPoolManager } from './buffer-pool-manager.js';
 import { QueryParser } from './query/query-parser.js';
 import { QueryRunner } from './query/query-runner.js';
@@ -18,7 +17,7 @@ export class Database {
     this.bufferPoolManager = new BufferPoolManager(this.diskManager, BUFFER_POOL_SIZE);
     this.catalog = new Catalog(this.bufferPoolManager);
     this.queryParser = new QueryParser();
-    this.queryRunner = new QueryRunner(this);
+    this.queryRunner = new QueryRunner(this, this.bufferPoolManager);
   }
 
   async open() {
@@ -37,12 +36,16 @@ export class Database {
     await this.diskManager.close();
   }
 
-  async createTable<T extends Entity>(tableName: string) {
-    return this.catalog.createTable<T>(tableName);
+  async createTable(tableName: string, schema: Schema) {
+    return this.catalog.createTable(tableName, schema);
   }
 
-  async getTable<T extends Entity>(tableName: string) {
-    return this.catalog.getTable<T>(tableName);
+  async getTable(tableName: string) {
+    return this.catalog.getTable(tableName);
+  }
+
+  async getSchema(tableName: string) {
+    return this.catalog.getSchema(tableName);
   }
 
   async query(query: string) {
