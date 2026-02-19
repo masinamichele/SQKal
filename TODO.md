@@ -40,6 +40,7 @@ This file tracks the implementation progress of our database engine.
 - **Query Engine**
   - [ ] Implement `UPDATE` command.
   - [ ] Expand `WHERE` clause support (`>`, `<`, `!=`, `AND`, `OR`).
+  - [ ] Add support for `IS (NOT) NULL` in `WHERE` clauses.
   - [ ] Support multi-row `INSERT` statements.
   - [ ] Create a query planner.
 

@@ -58,11 +58,23 @@ export class QueryRunner {
   }
 
   private matches(rowObject: Record<string, any>, { operator, field, value }: WhereClause) {
-    let matches = false;
-    if (operator === '=') {
-      matches = rowObject[field] === value;
+    const rowValue = rowObject[field];
+    switch (operator) {
+      case '=':
+        return rowValue === value;
+      case '<>':
+        return rowValue !== value;
+      case '<':
+        return rowValue < value;
+      case '>':
+        return rowValue > value;
+      case '<=':
+        return rowValue <= value;
+      case '>=':
+        return rowValue >= value;
+      default:
+        throw new Error(`Unknown operator '${operator}' in WHERE clause`);
     }
-    return matches;
   }
 
   private async handleInsert(command: InsertCommand) {

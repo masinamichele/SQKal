@@ -57,6 +57,11 @@ try {
   await db.query("UPDATE users SET name = 'Eve' WHERE id = 1");
   const updatedUser = await db.query('SELECT * FROM users WHERE id = 1');
   console.log(updatedUser);
+
+  console.log();
+  console.log('Finding specific user:');
+  const users = await db.query('SELECT * FROM users WHERE id >= 1');
+  console.log(users);
 } finally {
   console.log('Closing database.');
   await db.close();

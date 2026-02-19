@@ -5,7 +5,7 @@ const TOKEN_REGEX: Record<Token['type'], RegExp> = {
   NUMBER: /^\d+/,
   STRING: /^'[^']*'/,
   IDENTIFIER: /^\w+/i,
-  OPERATOR: /^[*=]/,
+  OPERATOR: /^(<>|<=|>=|[*=<>])/,
   PUNCTUATION: /^[,;()]/,
 };
 
