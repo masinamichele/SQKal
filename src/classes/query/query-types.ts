@@ -1,39 +1,49 @@
 import { Schema } from '../catalog.js';
 
-export interface WhereClause {
+type ValueType = string | number;
+
+export type WhereClause = {
   field: string;
   operator: string;
-  value: string | number;
-}
+  value: ValueType;
+};
 
-export interface InsertCommand {
+export type SetClause = Record<string, ValueType>;
+
+type BaseCommand = {
+  tableName: string;
+};
+
+export type InsertCommand = BaseCommand & {
   type: 'INSERT';
-  tableName: string;
-  values: (string | number)[];
-}
+  values: ValueType[];
+};
 
-export interface SelectCommand {
+export type SelectCommand = BaseCommand & {
   type: 'SELECT';
-  tableName: string;
   fields: '*' | string[];
   where?: WhereClause;
-}
+};
 
-export interface CreateTableCommand {
+export type CreateTableCommand = BaseCommand & {
   type: 'CREATE_TABLE';
-  tableName: string;
   schema: Schema;
-}
+};
 
-export interface DeleteCommand {
+export type DeleteCommand = BaseCommand & {
   type: 'DELETE';
-  tableName: string;
   where: WhereClause;
-}
+};
 
-export type Command = InsertCommand | SelectCommand | DeleteCommand | CreateTableCommand;
+export type UpdateCommand = BaseCommand & {
+  type: 'UPDATE';
+  set: SetClause;
+  where: WhereClause;
+};
 
-export interface Token {
+export type Command = InsertCommand | SelectCommand | DeleteCommand | CreateTableCommand | UpdateCommand;
+
+export type Token = {
   type: 'KEYWORD' | 'IDENTIFIER' | 'NUMBER' | 'STRING' | 'OPERATOR' | 'PUNCTUATION';
   value: string;
-}
+};

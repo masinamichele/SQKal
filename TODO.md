@@ -22,7 +22,7 @@ This file tracks the implementation progress of our database engine.
 - [x] **Buffer Management**
   - [x] Create a `DoublyLinkedList` for the LRU replacer.
   - [x] Implement `fetchPage` in `BufferPoolManager` with LRU eviction logic.
-  - [x] Track "dirty" pages and write them to disk before eviction.
+  - [x] Track "dirty" pages (modified pages) and write them to disk before eviction.
   - [x] Implement page "pinning" to prevent active pages from being evicted.
   - [x] Refactor all core classes to use the `BufferPoolManager`.
 
@@ -38,8 +38,9 @@ This file tracks the implementation progress of our database engine.
   - [ ] Implement a Dependency Injection (DI) container to manage services.
 
 - **Query Engine**
-  - [ ] Expand `WHERE` clause support (`>`, `<`, `!=`, `AND`, `OR`).
   - [ ] Implement `UPDATE` command.
+  - [ ] Expand `WHERE` clause support (`>`, `<`, `!=`, `AND`, `OR`).
+  - [ ] Support multi-row `INSERT` statements.
   - [ ] Create a query planner.
 
 - **Production-Grade Features**

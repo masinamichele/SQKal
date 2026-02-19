@@ -4,7 +4,9 @@ import {
   DeleteCommand,
   InsertCommand,
   SelectCommand,
+  SetClause,
   Token,
+  UpdateCommand,
   WhereClause,
 } from './query-types.js';
 import { QueryTokenizer } from './query-tokenizer.js';
@@ -27,10 +29,10 @@ export class QueryParser {
     const token = this.peek();
     if (!token) throw new Error(`Unexpected end of query`);
     if (expectedType && token.type !== expectedType) {
-      throw new Error(`Unexpected token type: ${token.type} instead of ${expectedType}`);
+      throw new Error(`Unexpected token type: ${token.type}(${token.value}) instead of ${expectedType}(_)`);
     }
     if (expectedValue && token.value !== expectedValue) {
-      throw new Error(`Unexpected token value: ${token.value} instead of ${expectedValue}`);
+      throw new Error(`Unexpected token value: ${token.type}(${token.value}) instead of _(${expectedValue})`);
     }
     this.cursor++;
     return token;
@@ -49,11 +51,13 @@ export class QueryParser {
           return this.parseDeleteStatement();
         case 'CREATE TABLE':
           return this.parseCreateTableStatement();
+        case 'UPDATE':
+          return this.parseUpdateStatement();
       }
     }
   }
 
-  private parseIdentifiersList() {
+  private _parseIdentifiersList() {
     const identifiers: string[] = [];
 
     do {
@@ -66,7 +70,7 @@ export class QueryParser {
     return identifiers;
   }
 
-  private parseTypedValue() {
+  private _parseTypedValue() {
     const token = this.consume();
     if (token.type === 'NUMBER') {
       return Number(token.value);
@@ -77,11 +81,11 @@ export class QueryParser {
     }
   }
 
-  private parseValuesList() {
+  private _parseValuesList() {
     const values: (string | number)[] = [];
 
     do {
-      values.push(this.parseTypedValue());
+      values.push(this._parseTypedValue());
       if (this.peek()?.value === ',') {
         this.consume('PUNCTUATION', ',');
       } else break;
@@ -90,7 +94,7 @@ export class QueryParser {
     return values;
   }
 
-  private parseColumnDefinition(): Column {
+  private _parseColumnDefinition(): Column {
     const name = this.consume('IDENTIFIER').value;
     const typeToken = this.consume('KEYWORD').value;
 
@@ -108,12 +112,29 @@ export class QueryParser {
     return { name, type };
   }
 
-  private parseWhereClause(): WhereClause {
+  private _parseWhereClause(): WhereClause {
     this.consume('KEYWORD', 'WHERE');
     const field = this.consume('IDENTIFIER').value;
     const operator = this.consume('OPERATOR').value;
-    const value = this.parseTypedValue();
+    const value = this._parseTypedValue();
     return { field, operator, value };
+  }
+
+  private _parseSetClause(): SetClause {
+    this.consume('KEYWORD', 'SET');
+    const setClause: SetClause = {};
+
+    do {
+      const field = this.consume('IDENTIFIER').value;
+      this.consume('OPERATOR', '=');
+      setClause[field] = this._parseTypedValue();
+
+      if (this.peek()?.value === ',') {
+        this.consume('PUNCTUATION', ',');
+      } else break;
+    } while (true);
+
+    return setClause;
   }
 
   private parseInsertStatement(): InsertCommand {
@@ -122,7 +143,7 @@ export class QueryParser {
     this.consume('KEYWORD', 'VALUES');
     this.consume('PUNCTUATION', '(');
 
-    const values = this.parseValuesList();
+    const values = this._parseValuesList();
 
     this.consume('PUNCTUATION', ')');
 
@@ -136,7 +157,7 @@ export class QueryParser {
       this.consume('OPERATOR', '*');
       fields = '*';
     } else {
-      fields = this.parseIdentifiersList();
+      fields = this._parseIdentifiersList();
     }
 
     this.consume('KEYWORD', 'FROM');
@@ -144,7 +165,7 @@ export class QueryParser {
 
     let where: WhereClause;
     if (this.peek()?.value.toUpperCase() === 'WHERE') {
-      where = this.parseWhereClause();
+      where = this._parseWhereClause();
     }
 
     return { type: 'SELECT', tableName, fields, where };
@@ -153,7 +174,7 @@ export class QueryParser {
   private parseDeleteStatement(): DeleteCommand {
     this.consume('KEYWORD', 'DELETE FROM');
     const tableName = this.consume('IDENTIFIER').value;
-    const where = this.parseWhereClause();
+    const where = this._parseWhereClause();
     return { type: 'DELETE', tableName, where };
   }
 
@@ -164,7 +185,7 @@ export class QueryParser {
 
     const schema: Schema = [];
     do {
-      schema.push(this.parseColumnDefinition());
+      schema.push(this._parseColumnDefinition());
       if (this.peek()?.value === ',') {
         this.consume('PUNCTUATION', ',');
       } else break;
@@ -173,5 +194,13 @@ export class QueryParser {
     this.consume('PUNCTUATION', ')');
 
     return { type: 'CREATE_TABLE', tableName, schema };
+  }
+
+  private parseUpdateStatement(): UpdateCommand {
+    this.consume('KEYWORD', 'UPDATE');
+    const tableName = this.consume('IDENTIFIER').value;
+    const set = this._parseSetClause();
+    const where = this._parseWhereClause();
+    return { type: 'UPDATE', tableName, set, where };
   }
 }

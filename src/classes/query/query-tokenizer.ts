@@ -1,7 +1,7 @@
 import { Token } from './query-types.js';
 
 const TOKEN_REGEX: Record<Token['type'], RegExp> = {
-  KEYWORD: /^(SELECT|INSERT INTO|VALUES|FROM|WHERE|DELETE FROM|CREATE TABLE|INT|VARCHAR)\b/i,
+  KEYWORD: /^(SELECT|INSERT INTO|VALUES|FROM|WHERE|DELETE FROM|CREATE TABLE|UPDATE|SET|INT|VARCHAR)\b/i,
   NUMBER: /^\d+/,
   STRING: /^'[^']*'/,
   IDENTIFIER: /^\w+/i,
@@ -22,7 +22,7 @@ export class QueryTokenizer {
 
       let matched = false;
       for (const [type, regex] of Object.entries(TOKEN_REGEX)) {
-        const match = query.slice(cursor).match(regex);
+        const match = regex.exec(query.slice(cursor));
         if (match) {
           tokens.push({ type: type as Token['type'], value: match[0] });
           cursor += match[0].length;

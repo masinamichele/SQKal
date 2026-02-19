@@ -1,5 +1,13 @@
 import { Database } from '../database.js';
-import { Command, CreateTableCommand, DeleteCommand, InsertCommand, SelectCommand } from './query-types.js';
+import {
+  Command,
+  CreateTableCommand,
+  DeleteCommand,
+  InsertCommand,
+  SelectCommand,
+  UpdateCommand,
+  WhereClause,
+} from './query-types.js';
 import { Serializer } from '../serializer.js';
 import { BufferPoolManager } from '../buffer-pool-manager.js';
 import { Page } from '../page.js';
@@ -21,6 +29,8 @@ export class QueryRunner {
         return this.handleDelete(command);
       case 'CREATE_TABLE':
         return this.handleCreateTable(command);
+      case 'UPDATE':
+        return this.handleUpdate(command);
       default:
         throw new Error(`Unknown command '${(command as any)?.type}'`);
     }
@@ -47,6 +57,14 @@ export class QueryRunner {
     }, {});
   }
 
+  private matches(rowObject: Record<string, any>, { operator, field, value }: WhereClause) {
+    let matches = false;
+    if (operator === '=') {
+      matches = rowObject[field] === value;
+    }
+    return matches;
+  }
+
   private async handleInsert(command: InsertCommand) {
     const { table, schema } = await this.getCommandEntities(command);
 
@@ -70,12 +88,7 @@ export class QueryRunner {
       const rowObject = Serializer.deserialize(rowBuffer, schema);
 
       if (command.where) {
-        const { field, operator, value } = command.where;
-        let matches = false;
-        if (operator === '=') {
-          matches = rowObject[field] === value;
-        }
-        if (!matches) continue;
+        if (!this.matches(rowObject, command.where)) continue;
       }
 
       if (command.fields === '*') {
@@ -91,16 +104,11 @@ export class QueryRunner {
   private async handleDelete(command: DeleteCommand) {
     const { table, schema } = await this.getCommandEntities(command);
 
-    const { field, operator, value } = command.where;
     const locationToDelete: { pageId: number; rowIndex: number }[] = [];
 
     for await (const { buffer, pageId, rowIndex } of table.scanWithLocation()) {
       const rowObject = Serializer.deserialize(buffer, schema);
-      let matches = false;
-      if (operator === '=') {
-        matches = rowObject[field] === value;
-      }
-      if (matches) {
+      if (this.matches(rowObject, command.where)) {
         locationToDelete.push({ pageId, rowIndex });
       }
     }
@@ -129,5 +137,24 @@ export class QueryRunner {
   private async handleCreateTable(command: CreateTableCommand) {
     await this.database.createTable(command.tableName, command.schema);
     return [1];
+  }
+
+  private async handleUpdate(command: UpdateCommand) {
+    const { table, schema } = await this.getCommandEntities(command);
+    const rowsToUpdate: Record<string, any>[] = [];
+    for await (const rowBuffer of table.scan()) {
+      const rowObject = Serializer.deserialize(rowBuffer, schema);
+      if (this.matches(rowObject, command.where)) {
+        rowsToUpdate.push(rowObject);
+      }
+    }
+    for (const oldRow of rowsToUpdate) {
+      const oldRowBuffer = Serializer.serialize(oldRow, schema);
+      await table.delete(oldRowBuffer);
+      const newRow = { ...oldRow, ...command.set };
+      const newRowBuffer = Serializer.serialize(newRow, schema);
+      await table.insert(newRowBuffer);
+    }
+    return [rowsToUpdate.length];
   }
 }

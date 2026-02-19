@@ -1,7 +1,6 @@
 import { Database } from './classes/database.js';
 import { join } from 'node:path';
 import { rm } from 'node:fs/promises';
-import { DataType } from './classes/catalog.js';
 
 await rm(join(import.meta.dirname, '../db/main.db'), { force: true });
 console.log('[debug] Previous database deleted.');
@@ -52,6 +51,12 @@ try {
   console.log('Finding specific user:');
   const user = await db.query('SELECT * FROM users WHERE id = 1');
   console.log(user);
+
+  console.log();
+  console.log('Updating user:');
+  await db.query("UPDATE users SET name = 'Eve' WHERE id = 1");
+  const updatedUser = await db.query('SELECT * FROM users WHERE id = 1');
+  console.log(updatedUser);
 } finally {
   console.log('Closing database.');
   await db.close();
