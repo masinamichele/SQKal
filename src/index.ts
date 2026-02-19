@@ -2,6 +2,9 @@ import { Database } from './classes/database.js';
 import { join } from 'node:path';
 import { Table } from './classes/table.js';
 import { User } from './entities/User.js';
+import { rm } from 'node:fs/promises';
+
+await rm(join(import.meta.dirname, '../db/main.db'), { force: true });
 
 const db = new Database(join(import.meta.dirname, '../db/main.db'));
 await db.open();
@@ -26,7 +29,7 @@ try {
 
   console.log();
   console.log('Scanning all users:');
-  let allUsers = await usersTable.select();
+  let allUsers = await db.query('SELECT * FROM users');
   if (allUsers.length) {
     for (const user of allUsers) {
       console.log(`User ${user.id}: ${user.name}`);
@@ -47,7 +50,7 @@ try {
 
   console.log();
   console.log('Scanning all users:');
-  allUsers = await usersTable.select();
+  allUsers = await db.query('SELECT id, name FROM users');
   if (allUsers.length) {
     for (const user of allUsers) {
       console.log(`User ${user.id}: ${user.name}`);

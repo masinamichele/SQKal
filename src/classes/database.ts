@@ -3,7 +3,8 @@ import { Catalog } from './catalog.js';
 import { BUFFER_POOL_SIZE, CATALOG } from '../const.js';
 import { Entity } from './entity.js';
 import { BufferPoolManager } from './buffer-pool-manager.js';
-import { QueryParser, QueryRunner } from './query.js';
+import { QueryParser } from './query/query-parser.js';
+import { QueryRunner } from './query/query-runner.js';
 
 export class Database {
   private readonly diskManager: DiskManager;
