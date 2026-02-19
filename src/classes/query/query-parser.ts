@@ -1,4 +1,4 @@
-import { Command, InsertCommand, SelectCommand, Token } from './types.js';
+import { Command, InsertCommand, SelectCommand, Token, WhereClause } from './types.js';
 import { QueryTokenizer } from './query-tokenizer.js';
 
 export class QueryParser {
@@ -53,25 +53,36 @@ export class QueryParser {
     return identifiers;
   }
 
+  private parseTypedValue() {
+    const token = this.consume();
+    if (token.type === 'NUMBER') {
+      return Number(token.value);
+    } else if (token.type === 'STRING') {
+      return token.value.slice(1, -1);
+    } else {
+      throw new Error(`Expected NUMBER or STRING in value list, but got ${token.type} (${token.value})`);
+    }
+  }
+
   private parseValuesList() {
     const values: (string | number)[] = [];
 
     do {
-      const token = this.consume();
-      if (token.type === 'NUMBER') {
-        values.push(Number(token.value));
-      } else if (token.type === 'STRING') {
-        values.push(token.value.slice(1, -1));
-      } else {
-        throw new Error(`Expected NUMBER or STRING in value list, but got ${token.type} (${token.value})`);
-      }
-
+      values.push(this.parseTypedValue());
       if (this.peek()?.value === ',') {
         this.consume('PUNCTUATION', ',');
       } else break;
     } while (true);
 
     return values;
+  }
+
+  private parseWhereClause(): WhereClause {
+    this.consume('KEYWORD', 'WHERE');
+    const field = this.consume('IDENTIFIER').value;
+    const operator = this.consume('OPERATOR').value;
+    const value = this.parseTypedValue();
+    return { field, operator, value };
   }
 
   private parseInsertStatement(): InsertCommand {
@@ -100,6 +111,11 @@ export class QueryParser {
     this.consume('KEYWORD', 'FROM');
     const tableName = this.consume('IDENTIFIER').value;
 
-    return { type: 'SELECT', tableName, fields };
+    let where: WhereClause;
+    if (this.peek()?.value.toUpperCase() === 'WHERE') {
+      where = this.parseWhereClause();
+    }
+
+    return { type: 'SELECT', tableName, fields, where };
   }
 }

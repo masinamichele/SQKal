@@ -6,7 +6,7 @@ import { METADATA_KEY_COLUMNS } from '../decorators/keys.js';
 export class QueryRunner {
   constructor(private readonly database: Database) {}
 
-  async run(command: Command) {
+  async run(command: Command): Promise<any[]> {
     switch (command.type) {
       case 'INSERT':
         return this.handleInsert(command);
@@ -15,6 +15,13 @@ export class QueryRunner {
       default:
         throw new Error(`Unknown command '${(command as any)?.type}'`);
     }
+  }
+
+  private pick(item: any, fields: string[]) {
+    return fields.reduce<any>((obj, field) => {
+      obj[field] = item[field];
+      return obj;
+    }, {});
   }
 
   private async handleInsert(command: InsertCommand) {
@@ -38,14 +45,22 @@ export class QueryRunner {
     if (!table) {
       throw new Error(`Table '${command.tableName}' not found.`);
     }
-    return table.select().then((rows) => {
-      if (command.fields === '*') return rows;
-      return rows.map((row) => {
-        return (command.fields as string[]).reduce<any>((obj, field) => {
-          obj[field] = (row as any)[field];
-          return obj;
-        }, {});
-      });
-    });
+
+    let rows = await table.select();
+
+    if (command.where) {
+      const { field, operator, value } = command.where;
+      if (operator === '=') {
+        rows = rows.filter((row) => (row as any)[field] === value);
+      }
+    }
+
+    if (command.fields === '*') {
+      rows = rows.map((row) => row.raw());
+    } else {
+      rows = rows.map((row) => this.pick(row, command.fields as string[]));
+    }
+
+    return rows;
   }
 }

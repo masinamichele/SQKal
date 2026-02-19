@@ -56,6 +56,11 @@ try {
       console.log(`User ${user.id}: ${user.name}`);
     }
   } else console.log('No users found');
+
+  console.log();
+  console.log('Finding specific user:');
+  const user = await db.query('SELECT * FROM users WHERE id = 1');
+  console.log(user);
 } finally {
   console.log('Closing database.');
   await db.close();

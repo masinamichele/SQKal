@@ -16,6 +16,10 @@ export abstract class Entity {
     return entity;
   }
 
+  raw() {
+    return JSON.parse(JSON.stringify(this));
+  }
+
   serialize(): Buffer {
     const columns = ReflectMetadata.get(METADATA_KEY_COLUMNS, this.constructor);
     if (!columns) return Buffer.alloc(0);

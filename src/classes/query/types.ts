@@ -1,4 +1,4 @@
-interface WhereClause {
+export interface WhereClause {
   field: string;
   operator: string;
   value: string | number;
