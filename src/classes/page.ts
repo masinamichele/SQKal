@@ -1,5 +1,5 @@
 import { Buffer } from 'node:buffer';
-import { PAGE_HEADER_SIZE, LAST_PAGE_ID, PAGE_SIZE, sizeof_uint32, PAGE_SLOT_SIZE } from '../const.js';
+import { PAGE_HEADER_SIZE, LAST_PAGE_ID, PAGE_SIZE, sizeof_uint32, PAGE_SLOT_SIZE, sizeof_uint16 } from '../const.js';
 
 export class Page {
   constructor(
@@ -28,11 +28,19 @@ export class Page {
     this.buffer.writeUint32BE(value, 2 * sizeof_uint32);
   }
 
+  get totalFreeSpace() {
+    return this.buffer.readUint16BE(3 * sizeof_uint32);
+  }
+  private set totalFreeSpace(value: number) {
+    this.buffer.writeUint16BE(value, 3 * sizeof_uint32);
+  }
+
   static initialize(buffer: Buffer, id: number) {
     const page = new this(buffer, id);
     page.rowCount = 0;
     page.freeSpacePointer = PAGE_SIZE;
     page.nextPageId = LAST_PAGE_ID;
+    page.totalFreeSpace = PAGE_SIZE - PAGE_HEADER_SIZE;
     return page;
   }
 
@@ -73,6 +81,7 @@ export class Page {
     this.setSlot(this.rowCount, newRowOffset, size);
     this.freeSpacePointer = newRowOffset;
     this.rowCount += 1;
+    this.totalFreeSpace -= requiredSpace;
     return this.rowCount;
   }
 
@@ -90,10 +99,12 @@ export class Page {
     if (index < 0 || index >= this.rowCount) {
       throw new RangeError(`Row index ${index} out of bounds`);
     }
+    const { length } = this.getSlot(index);
     for (let i = index; i < this.rowCount - 1; i++) {
       const nextSlot = this.getSlot(i + 1);
       this.setSlot(i, nextSlot.offset, nextSlot.length);
     }
+    this.totalFreeSpace += length + PAGE_SLOT_SIZE;
     this.rowCount -= 1;
   }
 

@@ -11,12 +11,11 @@ import {
 import { Serializer } from '../serializer.js';
 import { BufferPoolManager } from '../buffer-pool-manager.js';
 import { Page } from '../page.js';
-import { DataType, Schema } from '../catalog.js';
 
 export class QueryRunner {
   constructor(
     private readonly database: Database,
-    private readonly bufferPoolManager: BufferPoolManager,
+    private readonly bpm: BufferPoolManager,
   ) {}
 
   async run(command: Command): Promise<any[]> {
@@ -133,14 +132,14 @@ export class QueryRunner {
 
     for (const [pageIdString, rowIndices] of Object.entries(deletionByPage)) {
       const pageId = Number(pageIdString);
-      const pageBuffer = await this.bufferPoolManager.fetchPage(pageId);
+      const pageBuffer = await this.bpm.fetchPage(pageId);
       if (!pageBuffer) continue;
       const page = new Page(pageBuffer, pageId);
       rowIndices.sort((a, b) => b - a);
       for (const rowIndex of rowIndices) {
         page.deleteRow(rowIndex);
       }
-      this.bufferPoolManager.unpin(pageId, true);
+      this.bpm.unpin(pageId, true);
     }
 
     return [locationToDelete.length];

@@ -1,43 +1,20 @@
 import { Buffer } from 'node:buffer';
-import { LAST_PAGE_ID } from '../const.js';
+import { LAST_PAGE_ID, PAGE_SLOT_SIZE } from '../const.js';
 import { Page } from './page.js';
 import { BufferPoolManager } from './buffer-pool-manager.js';
+import { FreeSpaceMap } from './free-space-map.js';
 
 export class Table {
   constructor(
-    private readonly bufferPoolManager: BufferPoolManager,
+    private readonly bpm: BufferPoolManager,
+    private readonly fsm: FreeSpaceMap,
     private readonly firstPageId: number,
   ) {}
-
-  async insert(row: Buffer) {
-    let currentPageId = this.firstPageId;
-    while (true) {
-      const pageBuffer = await this.bufferPoolManager.fetchPage(currentPageId);
-      const page = new Page(pageBuffer, currentPageId);
-      const rowId = page.insertRow(row);
-      if (rowId !== null) {
-        this.bufferPoolManager.unpin(page.id, true);
-        return;
-      }
-
-      const nextPageId = page.nextPageId;
-      if (nextPageId === LAST_PAGE_ID) {
-        const { pageId, buffer } = await this.bufferPoolManager.newPage();
-        page.nextPageId = pageId;
-        this.bufferPoolManager.unpin(page.id, true);
-        const newPage = Page.initialize(buffer, pageId);
-        newPage.insertRow(row);
-        this.bufferPoolManager.unpin(pageId, true);
-        return;
-      }
-      currentPageId = nextPageId;
-    }
-  }
 
   async *scanWithLocation() {
     let id = this.firstPageId;
     while (id !== LAST_PAGE_ID) {
-      const pageBuffer = await this.bufferPoolManager.fetchPage(id);
+      const pageBuffer = await this.bpm.fetchPage(id);
       const page = new Page(pageBuffer, id);
       try {
         for (let i = 0; i < page.rowCount; i++) {
@@ -45,7 +22,7 @@ export class Table {
           yield { buffer, pageId: id, rowIndex: i };
         }
       } finally {
-        this.bufferPoolManager.unpin(id, false);
+        this.bpm.unpin(id, false);
       }
       id = page.nextPageId;
     }
@@ -57,35 +34,77 @@ export class Table {
     }
   }
 
-  async vacuum() {
-    let id = this.firstPageId;
-    while (id !== LAST_PAGE_ID) {
-      const pageBuffer = await this.bufferPoolManager.fetchPage(id);
-      const page = new Page(pageBuffer, id);
-      page.defragment();
-      this.bufferPoolManager.unpin(page.id, true);
-      id = page.nextPageId;
-    }
-  }
+  async insert(row: Buffer) {
+    const requiredSpace = row.length + PAGE_SLOT_SIZE;
 
-  async select() {
-    const rows: Buffer[] = [];
-    for await (const row of this.scan()) {
-      rows.push(row);
+    const pageIdFromFsm = await this.fsm.findPage(requiredSpace);
+
+    if (pageIdFromFsm != null) {
+      const pageBuffer = await this.bpm.fetchPage(pageIdFromFsm);
+      if (pageBuffer) {
+        const page = new Page(pageBuffer, pageIdFromFsm);
+        if (page.insertRow(row) !== null) {
+          await this.fsm.update(page.id, page.totalFreeSpace);
+          this.bpm.unpin(pageIdFromFsm, true);
+          return;
+        }
+
+        page.defragment();
+        if (page.insertRow(row) !== null) {
+          await this.fsm.update(page.id, page.totalFreeSpace);
+          this.bpm.unpin(pageIdFromFsm, true);
+          return;
+        }
+
+        this.bpm.unpin(pageIdFromFsm, false);
+      }
     }
-    return rows;
+
+    let currentPageId = this.firstPageId;
+    let lastPage: Page = null;
+    while (currentPageId !== LAST_PAGE_ID) {
+      const currentPageBuffer = await this.bpm.fetchPage(currentPageId);
+      lastPage = new Page(currentPageBuffer, currentPageId);
+      const nextPageId = lastPage.nextPageId;
+      if (nextPageId === LAST_PAGE_ID) break;
+      this.bpm.unpin(currentPageId, false);
+      currentPageId = nextPageId;
+    }
+
+    const { pageId: newPageId, buffer: newPageBuffer } = await this.bpm.newPage();
+    lastPage.nextPageId = newPageId;
+    await this.fsm.update(lastPage.id, lastPage.totalFreeSpace);
+    this.bpm.unpin(lastPage.id, true);
+
+    const newPage = Page.initialize(newPageBuffer, newPageId);
+    await this.fsm.update(newPage.id, newPage.totalFreeSpace);
+    newPage.insertRow(row);
+    await this.fsm.update(newPage.id, newPage.totalFreeSpace);
+    this.bpm.unpin(newPage.id, true);
   }
 
   async delete(row: Buffer) {
     for await (const { buffer, rowIndex, pageId } of this.scanWithLocation()) {
       if (row.equals(buffer)) {
-        const pageBuffer = await this.bufferPoolManager.fetchPage(pageId);
+        const pageBuffer = await this.bpm.fetchPage(pageId);
         const page = new Page(pageBuffer, pageId);
         page.deleteRow(rowIndex);
-        this.bufferPoolManager.unpin(pageId, true);
+        await this.fsm.update(page.id, page.totalFreeSpace);
+        this.bpm.unpin(pageId, true);
         return true;
       }
     }
     return false;
+  }
+
+  async vacuum() {
+    let id = this.firstPageId;
+    while (id !== LAST_PAGE_ID) {
+      const pageBuffer = await this.bpm.fetchPage(id);
+      const page = new Page(pageBuffer, id);
+      page.defragment();
+      this.bpm.unpin(page.id, true);
+      id = page.nextPageId;
+    }
   }
 }
