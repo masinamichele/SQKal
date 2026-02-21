@@ -92,7 +92,7 @@ export class Page {
     row.copy(this.buffer, newRowOffset);
     this.setSlot(targetSlotIndex, newRowOffset, size);
     this.freeSpacePointer = newRowOffset;
-    if (targetSlotIndex !== this.rowCount) {
+    if (targetSlotIndex === this.rowCount) {
       this.rowCount += 1;
     }
     this.totalFreeSpace -= requiredSpace;
