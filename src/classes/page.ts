@@ -69,20 +69,34 @@ export class Page {
       throw new RangeError(`Row of size ${size} exceeds the maximum allowed size of ${maxRowSize}`);
     }
 
-    const requiredSpace = size + PAGE_SLOT_SIZE;
-    const endOfSlots = PAGE_HEADER_SIZE + this.rowCount * PAGE_SLOT_SIZE;
+    let targetSlotIndex = -1;
+    for (let i = 0; i < this.rowCount; i++) {
+      if (this.getSlot(i).length === 0) {
+        targetSlotIndex = i;
+        break;
+      }
+    }
 
+    let requiredSpace = size;
+    if (targetSlotIndex === -1) {
+      targetSlotIndex = this.rowCount;
+      requiredSpace += PAGE_SLOT_SIZE;
+    }
+
+    const endOfSlots = PAGE_HEADER_SIZE + this.rowCount * PAGE_SLOT_SIZE;
     if (requiredSpace > this.freeSpacePointer - endOfSlots) {
       return null;
     }
 
     const newRowOffset = this.freeSpacePointer - size;
     row.copy(this.buffer, newRowOffset);
-    this.setSlot(this.rowCount, newRowOffset, size);
+    this.setSlot(targetSlotIndex, newRowOffset, size);
     this.freeSpacePointer = newRowOffset;
-    this.rowCount += 1;
+    if (targetSlotIndex !== this.rowCount) {
+      this.rowCount += 1;
+    }
     this.totalFreeSpace -= requiredSpace;
-    return this.rowCount;
+    return targetSlotIndex + 1;
   }
 
   getRow(index: number) {
@@ -99,13 +113,11 @@ export class Page {
     if (index < 0 || index >= this.rowCount) {
       throw new RangeError(`Row index ${index} out of bounds`);
     }
-    const { length } = this.getSlot(index);
-    for (let i = index; i < this.rowCount - 1; i++) {
-      const nextSlot = this.getSlot(i + 1);
-      this.setSlot(i, nextSlot.offset, nextSlot.length);
-    }
+    const { length, offset } = this.getSlot(index);
+    if (length === 0) return;
+
+    this.setSlot(index, offset, 0);
     this.totalFreeSpace += length + PAGE_SLOT_SIZE;
-    this.rowCount -= 1;
   }
 
   defragment() {

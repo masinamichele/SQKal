@@ -19,6 +19,7 @@ export class Table {
       try {
         for (let i = 0; i < page.rowCount; i++) {
           const buffer = page.getRow(i);
+          if (!buffer) continue;
           yield { buffer, pageId: id, rowIndex: i };
         }
       } finally {
