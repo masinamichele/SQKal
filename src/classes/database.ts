@@ -5,8 +5,11 @@ import { BufferPoolManager } from './buffer-pool-manager.js';
 import { QueryParser } from './query/query-parser.js';
 import { QueryRunner } from './query/query-runner.js';
 import { FreeSpaceMap } from './free-space-map.js';
+import { Injector } from './injector.js';
 
 export class Database {
+  private readonly injector = Injector.getInstance();
+
   private readonly diskManager: DiskManager;
   private readonly bpm: BufferPoolManager;
   private readonly catalog: Catalog;
@@ -15,12 +18,12 @@ export class Database {
   private readonly queryRunner: QueryRunner;
 
   constructor(private readonly path: string) {
-    this.diskManager = new DiskManager(this.path);
-    this.bpm = new BufferPoolManager(this.diskManager, BUFFER_POOL_SIZE);
-    this.fsm = new FreeSpaceMap(this.bpm);
-    this.catalog = new Catalog(this.bpm, this.fsm);
-    this.queryParser = new QueryParser();
-    this.queryRunner = new QueryRunner(this, this.bpm);
+    this.diskManager = this.injector.register(DiskManager, [this.path]);
+    this.bpm = this.injector.register(BufferPoolManager, [BUFFER_POOL_SIZE]);
+    this.fsm = this.injector.register(FreeSpaceMap, []);
+    this.catalog = this.injector.register(Catalog, []);
+    this.queryParser = this.injector.register(QueryParser, []);
+    this.queryRunner = this.injector.register(QueryRunner, [this]);
   }
 
   async open() {
@@ -29,7 +32,7 @@ export class Database {
     const setupReservedPage = async (reservedId: number) => {
       const { pageId, buffer } = await this.bpm.newPage();
       if (pageId !== reservedId) {
-        throw new Error(`Database initialization failed: first page was ${pageId} instead of ${CATALOG}`);
+        throw new Error(`Database initialization failed: created page was ${pageId} instead of ${reservedId}`);
       }
       return buffer;
     };

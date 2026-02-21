@@ -2,9 +2,11 @@ import { BufferPoolManager } from './buffer-pool-manager.js';
 import { Buffer } from 'node:buffer';
 import { Page } from './page.js';
 import { FSM, sizeof_uint16 } from '../const.js';
+import { Injector } from './injector.js';
 
 export class FreeSpaceMap {
-  constructor(private readonly bpm: BufferPoolManager) {}
+  private readonly injector = Injector.getInstance();
+  private readonly bpm = this.injector.resolve(BufferPoolManager);
 
   async initialize(buffer: Buffer) {
     Page.initialize(buffer, FSM);

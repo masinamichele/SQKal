@@ -3,13 +3,14 @@ import { LAST_PAGE_ID, PAGE_SLOT_SIZE } from '../const.js';
 import { Page } from './page.js';
 import { BufferPoolManager } from './buffer-pool-manager.js';
 import { FreeSpaceMap } from './free-space-map.js';
+import { Injector } from './injector.js';
 
 export class Table {
-  constructor(
-    private readonly bpm: BufferPoolManager,
-    private readonly fsm: FreeSpaceMap,
-    private readonly firstPageId: number,
-  ) {}
+  private readonly injector = Injector.getInstance();
+  private readonly bpm = this.injector.resolve(BufferPoolManager);
+  private readonly fsm = this.injector.resolve(FreeSpaceMap);
+
+  constructor(private readonly firstPageId: number) {}
 
   async *scanWithLocation() {
     let id = this.firstPageId;

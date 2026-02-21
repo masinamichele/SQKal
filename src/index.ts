@@ -60,7 +60,7 @@ try {
 
   console.log();
   console.log('Finding specific users:');
-  const users = await db.query('SELECT * FROM users WHERE id >= 1');
+  const users = await db.query('SELECT * FROM users WHERE id > 1');
   console.log(users);
 } finally {
   console.log('Closing database.');

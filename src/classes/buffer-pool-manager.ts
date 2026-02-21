@@ -2,6 +2,7 @@ import { Buffer } from 'node:buffer';
 import { DiskManager } from './disk-manager.js';
 import { PAGE_SIZE } from '../const.js';
 import { DoublyLinkedList } from './doubly-linked-list.js';
+import { Injector } from './injector.js';
 
 export class BufferPoolManager {
   private readonly pool: Buffer[] = [];
@@ -12,10 +13,10 @@ export class BufferPoolManager {
   private readonly pinCount = new Map<number, number>();
   private readonly isDirty = new Map<number, boolean>();
 
-  constructor(
-    private readonly diskManager: DiskManager,
-    private readonly poolSize: number,
-  ) {
+  private readonly injector = Injector.getInstance();
+  private readonly diskManager = this.injector.resolve(DiskManager);
+
+  constructor(private readonly poolSize: number) {
     for (let i = 0; i < this.poolSize; i++) {
       this.pool.push(Buffer.alloc(PAGE_SIZE));
       this.freeList.push(i);

@@ -11,12 +11,13 @@ import {
 import { Serializer } from '../serializer.js';
 import { BufferPoolManager } from '../buffer-pool-manager.js';
 import { Page } from '../page.js';
+import { Injector } from '../injector.js';
 
 export class QueryRunner {
-  constructor(
-    private readonly database: Database,
-    private readonly bpm: BufferPoolManager,
-  ) {}
+  private readonly injector = Injector.getInstance();
+  private readonly bpm = this.injector.resolve(BufferPoolManager);
+
+  constructor(private readonly database: Database) {}
 
   async run(command: Command): Promise<any[]> {
     switch (command.type) {

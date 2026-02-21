@@ -4,6 +4,7 @@ import { Page } from './page.js';
 import { Table } from './table.js';
 import { BufferPoolManager } from './buffer-pool-manager.js';
 import { FreeSpaceMap } from './free-space-map.js';
+import { Injector } from './injector.js';
 
 export enum DataType {
   NUMBER = 0x01,
@@ -18,10 +19,9 @@ export type Column = {
 export type Schema = Column[];
 
 export class Catalog {
-  constructor(
-    private readonly bpm: BufferPoolManager,
-    private readonly fsm: FreeSpaceMap,
-  ) {}
+  private readonly injector = Injector.getInstance();
+  private readonly bpm = this.injector.resolve(BufferPoolManager);
+  private readonly fsm = this.injector.resolve(FreeSpaceMap);
 
   async initialize(buffer: Buffer) {
     Page.initialize(buffer, CATALOG);
@@ -74,7 +74,7 @@ export class Catalog {
     if (!row) return null;
     const nameLength = row.readUint32BE(0);
     const pageId = row.readUint32BE(sizeof_uint32 + nameLength);
-    return new Table(this.bpm, this.fsm, pageId);
+    return new Table(pageId);
   }
 
   async createTable(tableName: string, schema: Schema) {
@@ -122,6 +122,6 @@ export class Catalog {
     catalogPage.insertRow(catalogRow);
     this.bpm.unpin(CATALOG, true);
 
-    return new Table(this.bpm, this.fsm, pageId);
+    return new Table(pageId);
   }
 }
