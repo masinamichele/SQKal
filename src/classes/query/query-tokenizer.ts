@@ -3,10 +3,10 @@ import { Token } from './query-types.js';
 const TOKEN_REGEX: Record<Token['type'], RegExp> = {
   KEYWORD:
     /^(SELECT|INSERT INTO|VALUES|FROM|WHERE|DELETE FROM|CREATE TABLE|UPDATE|SET|INT|VARCHAR|ORDER BY|ASC|DESC|LIMIT|OFFSET)\b/i,
+  OPERATOR: /^(<>|<=|>=|LIKE|[*=<>])/,
   NUMBER: /^\d+/,
   STRING: /^'[^']*'/,
   IDENTIFIER: /^\w+/i,
-  OPERATOR: /^(<>|<=|>=|[*=<>])/,
   PUNCTUATION: /^[,;()]/,
 };
 

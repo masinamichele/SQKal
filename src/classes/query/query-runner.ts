@@ -72,6 +72,17 @@ export class QueryRunner {
         return rowValue <= value;
       case '>=':
         return rowValue >= value;
+      case 'LIKE': {
+        if (typeof value === 'number') return rowValue === value;
+        const _value = value.toLowerCase();
+        const _rowValue = rowValue.toLowerCase();
+        const globBegin = _value.startsWith('%');
+        const globEnd = _value.endsWith('%');
+        if (globBegin && globEnd) return _rowValue.includes(_value.slice(1, -1));
+        if (globBegin) return _rowValue.endsWith(_value.slice(1));
+        if (globEnd) return _rowValue.startsWith(_value.slice(0, -1));
+        return _rowValue === _value;
+      }
       default:
         throw new Error(`Unknown operator '${operator}' in WHERE clause`);
     }

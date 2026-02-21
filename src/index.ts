@@ -70,6 +70,11 @@ try {
   console.log('Complex select:');
   const complex = await db.query('SELECT * FROM users WHERE id > 1 ORDER BY id DESC LIMIT 2 OFFSET 1');
   console.log(complex);
+
+  console.log();
+  console.log('Like matching:');
+  const like = await db.query("SELECT * FROM users WHERE name LIKE '%a%'");
+  console.log(like);
 } finally {
   console.log('Closing database.');
   await db.close();
