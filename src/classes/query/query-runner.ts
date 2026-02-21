@@ -94,7 +94,7 @@ export class QueryRunner {
   private async handleSelect(command: SelectCommand) {
     const { table, schema } = await this.getCommandEntities(command);
 
-    const results: Record<string, any>[] = [];
+    let results: Record<string, any>[] = [];
 
     for await (const rowBuffer of table.scan()) {
       const rowObject = Serializer.deserialize(rowBuffer, schema);
@@ -108,6 +108,24 @@ export class QueryRunner {
       } else {
         results.push(this.pick(rowObject, command.fields));
       }
+    }
+
+    if (command.order) {
+      const { field, direction } = command.order;
+      results = results.toSorted((a, b) => {
+        if (a[field].toLocaleCompare) {
+          return a[field].toLocaleCompare(b[field]);
+        }
+        return a[field] - b[field];
+      });
+      if (direction === 'DESC') {
+        results = results.toReversed();
+      }
+    }
+
+    if (command.limit) {
+      const { limit, offset } = command.limit;
+      results = results.slice(offset ?? 0, offset + limit);
     }
 
     return results;

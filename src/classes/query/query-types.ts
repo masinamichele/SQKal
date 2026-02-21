@@ -8,6 +8,16 @@ export type WhereClause = {
   value: ValueType;
 };
 
+export type OrderByClause = {
+  field: string;
+  direction: 'ASC' | 'DESC';
+};
+
+export type LimitClause = {
+  limit: number;
+  offset?: number;
+};
+
 export type SetClause = Record<string, ValueType>;
 
 type BaseCommand = {
@@ -23,6 +33,8 @@ export type SelectCommand = BaseCommand & {
   type: 'SELECT';
   fields: '*' | string[];
   where?: WhereClause;
+  order?: OrderByClause;
+  limit?: LimitClause;
 };
 
 export type CreateTableCommand = BaseCommand & {

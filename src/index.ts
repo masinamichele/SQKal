@@ -16,6 +16,9 @@ try {
   await db.query("INSERT INTO users VALUES (1, 'Alice')");
   await db.query("INSERT INTO users VALUES (2, 'Bob')");
   await db.query("INSERT INTO users VALUES (3, 'Charlie')");
+  await db.query("INSERT INTO users VALUES (4, 'David')");
+  await db.query("INSERT INTO users VALUES (5, 'Eve')");
+  await db.query("INSERT INTO users VALUES (6, 'Frank')");
 
   console.log();
   console.log('Scanning all users:');
@@ -34,7 +37,7 @@ try {
 
   console.log();
   console.log('Deleting user with ID 4 (should fail)');
-  const [delCount2] = await db.query('DELETE FROM users WHERE id = 4');
+  const [delCount2] = await db.query('DELETE FROM users WHERE id = 99');
   if (delCount2) console.log('Deletion successful.');
   else console.log('User to delete was not found.');
 
@@ -54,14 +57,19 @@ try {
 
   console.log();
   console.log('Updating user:');
-  await db.query("UPDATE users SET name = 'Eve' WHERE id = 1");
+  await db.query("UPDATE users SET name = 'Aly' WHERE id = 1");
   const updatedUser = await db.query('SELECT * FROM users WHERE id = 1');
   console.log(updatedUser);
 
   console.log();
   console.log('Finding specific users:');
-  const users = await db.query('SELECT * FROM users WHERE id > 1');
+  const users = await db.query('SELECT id, name FROM users WHERE id > 1');
   console.log(users);
+
+  console.log();
+  console.log('Complex select:');
+  const complex = await db.query('SELECT * FROM users WHERE id > 1 ORDER BY id DESC LIMIT 2 OFFSET 1');
+  console.log(complex);
 } finally {
   console.log('Closing database.');
   await db.close();

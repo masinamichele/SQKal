@@ -3,6 +3,8 @@ import {
   CreateTableCommand,
   DeleteCommand,
   InsertCommand,
+  LimitClause,
+  OrderByClause,
   SelectCommand,
   SetClause,
   Token,
@@ -137,6 +139,27 @@ export class QueryParser {
     return setClause;
   }
 
+  private _parseOrderByClause(): OrderByClause {
+    this.consume('KEYWORD', 'ORDER BY');
+    const field = this.consume('IDENTIFIER').value;
+    let direction: 'ASC' | 'DESC' = 'ASC';
+    if (['ASC', 'DESC'].includes(this.peek()?.value)) {
+      direction = this.consume('KEYWORD').value as 'ASC' | 'DESC';
+    }
+    return { field, direction };
+  }
+
+  private _parseLimitClause(): LimitClause {
+    this.consume('KEYWORD', 'LIMIT');
+    const limit = Number(this.consume('NUMBER').value);
+    let offset: number = 0;
+    if (this.peek()?.value === 'OFFSET') {
+      this.consume('KEYWORD', 'OFFSET');
+      offset = Number(this.consume('NUMBER').value);
+    }
+    return { limit, offset };
+  }
+
   private parseInsertStatement(): InsertCommand {
     this.consume('KEYWORD', 'INSERT INTO');
     const tableName = this.consume('IDENTIFIER').value;
@@ -168,7 +191,17 @@ export class QueryParser {
       where = this._parseWhereClause();
     }
 
-    return { type: 'SELECT', tableName, fields, where };
+    let order: OrderByClause;
+    if (this.peek()?.value.toUpperCase() === 'ORDER BY') {
+      order = this._parseOrderByClause();
+    }
+
+    let limit: LimitClause;
+    if (this.peek()?.value.toUpperCase() === 'LIMIT') {
+      limit = this._parseLimitClause();
+    }
+
+    return { type: 'SELECT', tableName, fields, where, order, limit };
   }
 
   private parseDeleteStatement(): DeleteCommand {
