@@ -47,39 +47,41 @@ export class QueryScanner {
     return this.cursor < this.query.length;
   }
 
+  private get rest() {
+    return this.query.slice(this.cursor).toUpperCase();
+  }
+
   constructor(private readonly query: string) {}
 
   *iterator(): Generator<Token> {
     while (this.hasMore) {
-      this._skipWhitespace();
-
-      if (/[a-z]/i.test(this.char)) {
-        yield this._handleWord();
-        continue;
-      }
-
-      if (/\d/.test(this.char)) {
-        yield this._handleNumber();
-        continue;
-      }
-
-      if (this.char === "'") {
-        yield this._handleString();
-        continue;
-      }
-
-      if (/[,;()]/.test(this.char)) {
-        yield this._handlePunctuation();
-        continue;
-      }
-
-      if (/[*=<>]/.test(this.char)) {
-        yield this._handleSymbolOperator();
-        continue;
-      }
-
-      throw new Error(`Syntax error: Unexpected token '${this.char}' at position ${this.cursor}`);
+      const token = this.nextToken();
+      if (token) yield token;
+      else break;
     }
+  }
+
+  private nextToken() {
+    this._skipWhitespace();
+    if (!this.hasMore) return null;
+
+    if (/[a-z]/i.test(this.char)) {
+      return this._handleWord();
+    }
+    if (/\d/.test(this.char)) {
+      return this._handleNumber();
+    }
+    if (this.char === "'") {
+      return this._handleString();
+    }
+    if (/[,;()]/.test(this.char)) {
+      return this._handlePunctuation();
+    }
+    if (/[*=<>]/.test(this.char)) {
+      return this._handleSymbolOperator();
+    }
+
+    throw new Error(`Syntax error: Unexpected token '${this.char}' at position ${this.cursor}`);
   }
 
   private _skipWhitespace() {
@@ -89,10 +91,8 @@ export class QueryScanner {
   }
 
   private _handleWord(): Token {
-    const rest = this.query.slice(this.cursor).toUpperCase();
-
     for (const word of SORTED_RESERVED_WORDS) {
-      if (rest.startsWith(word)) {
+      if (this.rest.startsWith(word)) {
         const nextChar = this.query[this.cursor + word.length];
         if (nextChar == null || /\W/.test(nextChar)) {
           this.cursor += word.length;
