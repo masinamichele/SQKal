@@ -14,12 +14,13 @@ try {
   await db.exec`CREATE TABLE users (id INT, name VARCHAR)`;
 
   console.log('Inserting sample data...');
-  await db.exec`INSERT INTO users VALUES (1, 'Alice'),
-                                         (2, 'Bob'),
-                                         (3, 'Charlie'),
-                                         (4, 'David'),
-                                         (5, 'Eve'),
-                                         (6, null)`;
+  const [insertResult] = await db.exec`INSERT INTO users VALUES (1, 'Alice'),
+                                                                (2, 'Bob'),
+                                                                (3, 'Charlie'),
+                                                                (4, 'David'),
+                                                                (5, 'Eve'),
+                                                                (6, null)`;
+  console.log(`Inserted rows: ${insertResult}`);
 
   console.log();
   console.log('Scanning all users:');
@@ -69,13 +70,18 @@ try {
 
   console.log();
   console.log('Complex select:');
-  const complex = await db.exec`SELECT * FROM users WHERE id > 1 ORDER BY id DESC LIMIT 2OFFSET 1`;
+  const complex = await db.exec`SELECT * FROM users WHERE id > 1 ORDER BY id DESC LIMIT 2 OFFSET 1`;
   console.log(complex);
 
   console.log();
   console.log('Like matching:');
   const like = await db.exec`SELECT * FROM users WHERE name LIKE '%a%'`;
   console.log(like);
+
+  console.log();
+  console.log('Unequal:');
+  const unequal = await db.exec`SELECT * FROM users WHERE id <> 1`;
+  console.log(unequal);
 
   console.log();
   console.log('Nulls:');

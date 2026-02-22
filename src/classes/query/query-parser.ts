@@ -8,28 +8,30 @@ import {
   SelectCommand,
   SetClause,
   Token,
+  TokenType,
   UpdateCommand,
   ValueType,
   WhereClause,
 } from './query-types.js';
-import { QueryTokenizer } from './query-tokenizer.js';
+import { QueryScanner } from './query-scanner.js';
 import { Column, DataType, Schema } from '../catalog.js';
 
 export class QueryParser {
-  tokens: Token[] = [];
-  cursor = 0;
+  private scanner: Generator<Token>;
+  private lookahead: Token = null;
 
   parse(query: string): Command {
-    this.tokens = QueryTokenizer.tokenize(query);
+    this.scanner = new QueryScanner(query).iterator();
+    this.lookahead = this.scanner.next().value;
     return this.buildCommand();
   }
 
   private peek() {
-    return this.tokens[this.cursor] || null;
+    return this.lookahead;
   }
 
-  private consume(expectedType?: Token['type'], expectedValue?: string) {
-    const token = this.peek();
+  private consume(expectedType?: TokenType, expectedValue?: string) {
+    const token = this.lookahead;
     if (!token) throw new Error(`Unexpected end of query`);
     if (expectedType && token.type !== expectedType) {
       throw new Error(`Unexpected token type: ${token.type}(${token.value}) instead of ${expectedType}(_)`);
@@ -37,12 +39,11 @@ export class QueryParser {
     if (expectedValue && token.value !== expectedValue) {
       throw new Error(`Unexpected token value: ${token.type}(${token.value}) instead of _(${expectedValue})`);
     }
-    this.cursor++;
+    this.lookahead = this.scanner.next().value;
     return token;
   }
 
   private buildCommand() {
-    this.cursor = 0;
     const firstToken = this.peek();
     if (firstToken?.type === 'KEYWORD') {
       switch (firstToken.value) {

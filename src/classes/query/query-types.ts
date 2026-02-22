@@ -55,7 +55,9 @@ export type UpdateCommand = BaseCommand & {
 
 export type Command = InsertCommand | SelectCommand | DeleteCommand | CreateTableCommand | UpdateCommand;
 
+export type TokenType = 'KEYWORD' | 'IDENTIFIER' | 'NUMBER' | 'STRING' | 'OPERATOR' | 'PUNCTUATION';
+
 export type Token = {
-  type: 'KEYWORD' | 'IDENTIFIER' | 'NUMBER' | 'STRING' | 'OPERATOR' | 'PUNCTUATION';
+  type: TokenType;
   value: string;
 };
