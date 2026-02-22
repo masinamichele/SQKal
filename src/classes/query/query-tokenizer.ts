@@ -1,9 +1,30 @@
 import { Token } from './query-types.js';
 
 const TOKEN_REGEX: Record<Token['type'], RegExp> = {
-  KEYWORD:
-    /^(SELECT|INSERT INTO|VALUES|FROM|WHERE|DELETE FROM|CREATE TABLE|UPDATE|SET|INT|VARCHAR|ORDER BY|ASC|DESC|LIMIT|OFFSET)\b/i,
-  OPERATOR: /^(<>|<=|>=|LIKE|[*=<>])/,
+  KEYWORD: new RegExp(
+    String.raw`^(${[
+      'SELECT',
+      'INSERT INTO',
+      'VALUES',
+      'FROM',
+      'WHERE',
+      'DELETE FROM',
+      'CREATE TABLE',
+      'UPDATE',
+      'SET',
+      'INT',
+      'VARCHAR',
+      'ORDER BY',
+      'ASC',
+      'DESC',
+      'LIMIT',
+      'OFFSET',
+      'NULL',
+      'NOT NULL',
+    ].join('|')})\b`,
+    'i',
+  ),
+  OPERATOR: new RegExp(String.raw`^(${['<>', '<=', '>=', 'LIKE', 'IS NOT', 'IS', '[*=<>]'].join('|')})`, 'i'),
   NUMBER: /^\d+/,
   STRING: /^'[^']*'/,
   IDENTIFIER: /^\w+/i,
@@ -25,7 +46,12 @@ export class QueryTokenizer {
       for (const [type, regex] of Object.entries(TOKEN_REGEX)) {
         const match = regex.exec(query.slice(cursor));
         if (match) {
-          tokens.push({ type: type as Token['type'], value: match[0] });
+          let value = match[0];
+          const uppercases: Token['type'][] = ['KEYWORD', 'OPERATOR'];
+          if (uppercases.includes(type as Token['type'])) {
+            value = value.toUpperCase();
+          }
+          tokens.push({ type: type as Token['type'], value });
           cursor += match[0].length;
           matched = true;
           break;

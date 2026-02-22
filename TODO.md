@@ -29,7 +29,7 @@ This file tracks the implementation progress of our database engine.
 - [x] **Query Engine**
   - [x] Refactor parser to be a two-stage (tokenizer/parser) process.
   - [x] Implement `INSERT`, `SELECT` (with projection), `DELETE`, `CREATE TABLE`, and `UPDATE` commands.
-  - [x] Implement `WHERE` clause with support for `=`, `<>`, `<`, `>`, `<=`, `>=`, and `LIKE`.
+  - [x] Implement `WHERE` clause with support for `=`, `<>`, `<`, `>`, `<=`, `>=`, `LIKE`, `IS NULL`, and `IS NOT NULL`.
   - [x] Implement `ORDER BY` (ASC/DESC) and `LIMIT` / `OFFSET` clauses for `SELECT`.
 
 - [x] **Architecture**
@@ -44,7 +44,6 @@ This file tracks the implementation progress of our database engine.
 - **Query Engine**
   - [ ] Implement Prepared Statements (parameterized queries) to prevent SQL injection.
   - [ ] Expand `WHERE` clause support for `AND` / `OR` conjunctions.
-  - [ ] Add support for `IS (NOT) NULL` in `WHERE` clauses.
   - [ ] Support multi-row `INSERT` statements.
   - [ ] Create a query planner.
 

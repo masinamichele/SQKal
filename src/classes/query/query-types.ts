@@ -1,6 +1,6 @@
 import { Schema } from '../catalog.js';
 
-export type ValueType = string | number;
+export type ValueType = string | number | null;
 
 export type WhereClause = {
   field: string;

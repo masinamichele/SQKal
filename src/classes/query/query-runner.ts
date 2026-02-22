@@ -12,6 +12,7 @@ import { Serializer } from '../serializer.js';
 import { BufferPoolManager } from '../buffer-pool-manager.js';
 import { Page } from '../page.js';
 import { Injector } from '../injector.js';
+import { Buffer } from 'node:buffer';
 
 export class QueryRunner {
   private readonly injector = Injector.getInstance();
@@ -73,6 +74,7 @@ export class QueryRunner {
       case '>=':
         return rowValue >= value;
       case 'LIKE': {
+        if (rowValue == null) return false;
         if (typeof value === 'number') return rowValue === value;
         const _value = value.toLowerCase();
         const _rowValue = rowValue.toLowerCase();
@@ -83,6 +85,10 @@ export class QueryRunner {
         if (globEnd) return _rowValue.startsWith(_value.slice(0, -1));
         return _rowValue === _value;
       }
+      case 'IS':
+        return rowValue == null;
+      case 'IS NOT':
+        return rowValue != null;
       default:
         throw new Error(`Unknown operator '${operator}' in WHERE clause`);
     }
@@ -91,16 +97,26 @@ export class QueryRunner {
   private async handleInsert(command: InsertCommand) {
     const { table, schema } = await this.getCommandEntities(command);
 
+    const buffersToInsert: Buffer[] = [];
+
     for (const values of command.values) {
       const data: Record<string, any> = {};
       schema.forEach((column, index) => {
-        data[column.name] = values[index];
+        const value = values[index];
+        if (!column.nullable && value == null) {
+          throw new Error(`Constraint violation: column '${column.name}' cannot be null`);
+        }
+        data[column.name] = value;
       });
       const rowBuffer = Serializer.serialize(data, schema);
-      await table.insert(rowBuffer);
+      buffersToInsert.push(rowBuffer);
     }
 
-    return [command.values.length];
+    for (const buffer of buffersToInsert) {
+      await table.insert(buffer);
+    }
+
+    return [buffersToInsert.length];
   }
 
   private async handleSelect(command: SelectCommand) {
@@ -190,13 +206,28 @@ export class QueryRunner {
         rowsToUpdate.push(rowObject);
       }
     }
+    const updatableRows: [old: Buffer, new: Buffer][] = [];
     for (const oldRow of rowsToUpdate) {
       const oldRowBuffer = Serializer.serialize(oldRow, schema);
-      await table.delete(oldRowBuffer);
       const newRow = { ...oldRow, ...command.set };
+
+      for (const column of schema) {
+        const value = newRow[column.name];
+        if (!column.nullable && value == null) {
+          throw new Error(`Constraint violation: Column '${column.name}' cannot be null.`);
+        }
+      }
+
       const newRowBuffer = Serializer.serialize(newRow, schema);
-      await table.insert(newRowBuffer);
+
+      updatableRows.push([oldRowBuffer, newRowBuffer]);
     }
-    return [rowsToUpdate.length];
+
+    for (const [old, row] of updatableRows) {
+      await table.delete(old);
+      await table.insert(row);
+    }
+
+    return [updatableRows.length];
   }
 }

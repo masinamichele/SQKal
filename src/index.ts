@@ -19,7 +19,7 @@ try {
                                          (3, 'Charlie'),
                                          (4, 'David'),
                                          (5, 'Eve'),
-                                         (6, 'Frank')`;
+                                         (6, null)`;
 
   console.log();
   console.log('Scanning all users:');
@@ -58,7 +58,7 @@ try {
 
   console.log();
   console.log('Updating user:');
-  await db.exec`UPDATE users SET name = 'Aly' WHERE id = 1`;
+  await db.exec`UPDATE users SET name = 'Ally' WHERE id = 1`;
   const updatedUser = await db.exec`SELECT * FROM users WHERE id = 1`;
   console.log(updatedUser);
 
@@ -76,6 +76,11 @@ try {
   console.log('Like matching:');
   const like = await db.exec`SELECT * FROM users WHERE name LIKE '%a%'`;
   console.log(like);
+
+  console.log();
+  console.log('Nulls:');
+  const nulls = await db.exec`SELECT * FROM users WHERE name IS NULL`;
+  console.log(nulls);
 } finally {
   console.log('Closing database.');
   await db.close();

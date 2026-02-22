@@ -14,6 +14,7 @@ export enum DataType {
 export type Column = {
   name: string;
   type: DataType;
+  nullable: boolean;
 };
 
 export type Schema = Column[];
@@ -64,7 +65,9 @@ export class Catalog {
       offset += columnNameLength;
       const columnType = row.readUInt8(offset);
       offset += sizeof_uint8;
-      schema.push({ name: columnName, type: columnType });
+      const nullableFlag = row.readUInt8(offset);
+      offset += sizeof_uint8;
+      schema.push({ name: columnName, type: columnType, nullable: nullableFlag === 0x01 });
     }
     return schema;
   }
@@ -91,11 +94,13 @@ export class Catalog {
 
     const columnBuffers = schema.map((column) => {
       const nameBuffer = Buffer.from(column.name, 'utf8');
-      const typeBuf = Buffer.alloc(sizeof_uint8);
-      typeBuf.writeUInt8(column.type);
+      const typeBuffer = Buffer.alloc(sizeof_uint8);
+      typeBuffer.writeUInt8(column.type);
       const nameLengthBuffer = Buffer.alloc(sizeof_uint8);
       nameLengthBuffer.writeUInt8(nameBuffer.length);
-      return Buffer.concat([nameLengthBuffer, nameBuffer, typeBuf]);
+      const nullableFlagBuffer = Buffer.alloc(sizeof_uint8);
+      nullableFlagBuffer.writeUInt8(column.nullable ? 0x01 : 0x00);
+      return Buffer.concat([nameLengthBuffer, nameBuffer, typeBuffer, nullableFlagBuffer]);
     });
     const columnsBuffer = Buffer.concat(columnBuffers);
 

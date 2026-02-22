@@ -79,6 +79,8 @@ export class QueryParser {
       return Number(token.value);
     } else if (token.type === 'STRING') {
       return token.value.slice(1, -1);
+    } else if (token.type === 'KEYWORD' && token.value === 'NULL') {
+      return null;
     } else {
       throw new Error(`Expected NUMBER or STRING in value list, but got ${token.type} (${token.value})`);
     }
@@ -102,7 +104,7 @@ export class QueryParser {
     const typeToken = this.consume('KEYWORD').value;
 
     let type: DataType;
-    switch (typeToken.toUpperCase()) {
+    switch (typeToken) {
       case 'INT':
         type = DataType.NUMBER;
         break;
@@ -112,7 +114,19 @@ export class QueryParser {
       default:
         throw new Error(`Unknown column type: ${typeToken}`);
     }
-    return { name, type };
+
+    let nullable = true;
+    const nextToken = this.peek();
+    if (nextToken?.type === 'KEYWORD') {
+      if (nextToken.value === 'NULL') {
+        this.consume('KEYWORD', 'NULL');
+      } else if (nextToken.value === 'NOT NULL') {
+        this.consume('KEYWORD', 'NOT NULL');
+        nullable = false;
+      }
+    }
+
+    return { name, type, nullable };
   }
 
   private _parseWhereClause(): WhereClause {
@@ -120,6 +134,12 @@ export class QueryParser {
     const field = this.consume('IDENTIFIER').value;
     const operator = this.consume('OPERATOR').value;
     const value = this._parseTypedValue();
+    if (value != null && (operator === 'IS' || operator === 'IS NOT')) {
+      throw new Error(`Operator ${operator} only supports NULL`);
+    } else if (value == null && !(operator === 'IS' || operator === 'IS NOT')) {
+      throw new Error(`Operator ${operator} cannot be used with NULL`);
+    }
+
     return { field, operator, value };
   }
 
@@ -195,17 +215,17 @@ export class QueryParser {
     const tableName = this.consume('IDENTIFIER').value;
 
     let where: WhereClause;
-    if (this.peek()?.value.toUpperCase() === 'WHERE') {
+    if (this.peek()?.value === 'WHERE') {
       where = this._parseWhereClause();
     }
 
     let order: OrderByClause;
-    if (this.peek()?.value.toUpperCase() === 'ORDER BY') {
+    if (this.peek()?.value === 'ORDER BY') {
       order = this._parseOrderByClause();
     }
 
     let limit: LimitClause;
-    if (this.peek()?.value.toUpperCase() === 'LIMIT') {
+    if (this.peek()?.value === 'LIMIT') {
       limit = this._parseLimitClause();
     }
 
