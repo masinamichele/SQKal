@@ -14,12 +14,12 @@ try {
   await db.exec`CREATE TABLE users (id INT, name VARCHAR)`;
 
   console.log('Inserting sample data...');
-  await db.exec`INSERT INTO users VALUES (1, 'Alice')`;
-  await db.exec`INSERT INTO users VALUES (2, 'Bob')`;
-  await db.exec`INSERT INTO users VALUES (3, 'Charlie')`;
-  await db.exec`INSERT INTO users VALUES (4, 'David')`;
-  await db.exec`INSERT INTO users VALUES (5, 'Eve')`;
-  await db.exec`INSERT INTO users VALUES (6, 'Frank')`;
+  await db.exec`INSERT INTO users VALUES (1, 'Alice'),
+                                         (2, 'Bob'),
+                                         (3, 'Charlie'),
+                                         (4, 'David'),
+                                         (5, 'Eve'),
+                                         (6, 'Frank')`;
 
   console.log();
   console.log('Scanning all users:');

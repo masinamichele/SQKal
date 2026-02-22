@@ -9,6 +9,7 @@ import {
   SetClause,
   Token,
   UpdateCommand,
+  ValueType,
   WhereClause,
 } from './query-types.js';
 import { QueryTokenizer } from './query-tokenizer.js';
@@ -84,7 +85,7 @@ export class QueryParser {
   }
 
   private _parseValuesList() {
-    const values: (string | number)[] = [];
+    const values: ValueType[] = [];
 
     do {
       values.push(this._parseTypedValue());
@@ -164,11 +165,18 @@ export class QueryParser {
     this.consume('KEYWORD', 'INSERT INTO');
     const tableName = this.consume('IDENTIFIER').value;
     this.consume('KEYWORD', 'VALUES');
-    this.consume('PUNCTUATION', '(');
 
-    const values = this._parseValuesList();
+    const values: ValueType[][] = [];
+    do {
+      this.consume('PUNCTUATION', '(');
+      const currentValues = this._parseValuesList();
+      this.consume('PUNCTUATION', ')');
+      values.push(currentValues);
 
-    this.consume('PUNCTUATION', ')');
+      if (this.peek()?.value === ',') {
+        this.consume('PUNCTUATION', ',');
+      } else break;
+    } while (true);
 
     return { type: 'INSERT', tableName, values };
   }

@@ -91,15 +91,16 @@ export class QueryRunner {
   private async handleInsert(command: InsertCommand) {
     const { table, schema } = await this.getCommandEntities(command);
 
-    const data: Record<string, any> = {};
-    schema.forEach((column, index) => {
-      data[column.name] = command.values[index];
-    });
+    for (const values of command.values) {
+      const data: Record<string, any> = {};
+      schema.forEach((column, index) => {
+        data[column.name] = values[index];
+      });
+      const rowBuffer = Serializer.serialize(data, schema);
+      await table.insert(rowBuffer);
+    }
 
-    const rowBuffer = Serializer.serialize(data, schema);
-    await table.insert(rowBuffer);
-
-    return [1];
+    return [command.values.length];
   }
 
   private async handleSelect(command: SelectCommand) {

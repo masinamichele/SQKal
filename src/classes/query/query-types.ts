@@ -1,6 +1,6 @@
 import { Schema } from '../catalog.js';
 
-type ValueType = string | number;
+export type ValueType = string | number;
 
 export type WhereClause = {
   field: string;
@@ -26,7 +26,7 @@ type BaseCommand = {
 
 export type InsertCommand = BaseCommand & {
   type: 'INSERT';
-  values: ValueType[];
+  values: ValueType[][];
 };
 
 export type SelectCommand = BaseCommand & {
