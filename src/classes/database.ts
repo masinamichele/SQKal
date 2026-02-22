@@ -8,6 +8,12 @@ import { FreeSpaceMap } from './free-space-map.js';
 import { Injector } from './injector.js';
 
 export class Database {
+  private static instance: Database;
+  static getInstance(path: string) {
+    if (!this.instance) this.instance = new Database(path);
+    return this.instance;
+  }
+
   private readonly injector = Injector.getInstance();
 
   private readonly diskManager: DiskManager;
@@ -17,7 +23,7 @@ export class Database {
   private readonly queryParser: QueryParser;
   private readonly queryRunner: QueryRunner;
 
-  constructor(private readonly path: string) {
+  private constructor(private readonly path: string) {
     this.diskManager = this.injector.register(DiskManager, [this.path]);
     this.bpm = this.injector.register(BufferPoolManager, [BUFFER_POOL_SIZE]);
     this.fsm = this.injector.register(FreeSpaceMap, []);

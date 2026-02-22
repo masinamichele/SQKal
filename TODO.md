@@ -38,9 +38,11 @@ This file tracks the implementation progress of our database engine.
 ## To Do
 
 - **Architecture**
+  - [ ] Refactor tokenizer from regex to a stateful scanner.
   - [ ] Implement a custom, numbered error system.
 
 - **Query Engine**
+  - [ ] Implement Prepared Statements (parameterized queries) to prevent SQL injection.
   - [ ] Expand `WHERE` clause support for `AND` / `OR` conjunctions.
   - [ ] Add support for `IS (NOT) NULL` in `WHERE` clauses.
   - [ ] Support multi-row `INSERT` statements.

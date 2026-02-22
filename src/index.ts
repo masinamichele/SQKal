@@ -5,7 +5,7 @@ import { rm } from 'node:fs/promises';
 await rm(join(import.meta.dirname, '../db/main.db'), { force: true });
 console.log('[debug] Previous database deleted.');
 
-const db = new Database(join(import.meta.dirname, '../db/main.db'));
+const db = Database.getInstance(join(import.meta.dirname, '../db/main.db'));
 await db.open();
 console.log('Database opened successfully.');
 
