@@ -62,7 +62,7 @@ export class Database {
     return this.catalog.getSchema(tableName);
   }
 
-  async query(query: string) {
+  async exec([query]: TemplateStringsArray) {
     const command = this.queryParser.parse(query);
     if (!command) {
       throw new Error(`Invalid query: '${query}'`);
