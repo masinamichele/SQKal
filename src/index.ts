@@ -70,7 +70,8 @@ try {
 
   console.log();
   console.log('Complex select:');
-  const complex = await db.exec`SELECT * FROM users WHERE id > 1 ORDER BY id DESC LIMIT 2 OFFSET 1`;
+  const complex =
+    await db.exec`SELECT * FROM users WHERE id > 1 AND (name IS NOT NULL OR id = 6) ORDER BY id DESC LIMIT 2 OFFSET 1`;
   console.log(complex);
 
   console.log();

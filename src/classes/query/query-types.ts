@@ -2,11 +2,21 @@ import { Schema } from '../catalog.js';
 
 export type ValueType = string | number | null;
 
-export type WhereClause = {
+export type ConditionNode = {
+  type: 'CONDITION';
   field: string;
   operator: string;
   value: ValueType;
 };
+
+export type LogicalNode = {
+  type: 'LOGICAL';
+  operator: 'AND' | 'OR';
+  left: WhereClause;
+  right: WhereClause;
+};
+
+export type WhereClause = ConditionNode | LogicalNode;
 
 export type OrderByClause = {
   field: string;

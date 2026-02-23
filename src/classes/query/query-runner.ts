@@ -1,9 +1,11 @@
 import { Database } from '../database.js';
 import {
   Command,
+  ConditionNode,
   CreateTableCommand,
   DeleteCommand,
   InsertCommand,
+  LogicalNode,
   SelectCommand,
   UpdateCommand,
   WhereClause,
@@ -58,7 +60,7 @@ export class QueryRunner {
     }, {});
   }
 
-  private matches(rowObject: Record<string, any>, { operator, field, value }: WhereClause) {
+  private _evaluateConditionNode(rowObject: Record<string, any>, { field, operator, value }: ConditionNode) {
     const rowValue = rowObject[field];
     switch (operator) {
       case '=':
@@ -92,6 +94,25 @@ export class QueryRunner {
       default:
         throw new Error(`Unknown operator '${operator}' in WHERE clause`);
     }
+  }
+
+  private _evaluateLogicalNode(rowObject: Record<string, any>, { operator, left, right }: LogicalNode) {
+    const leftResult = this.matches(rowObject, left);
+    if (operator === 'OR' && leftResult) return true;
+    if (operator === 'AND' && !leftResult) return false;
+    const rightResult = this.matches(rowObject, right);
+    if (operator === 'OR') return leftResult || rightResult;
+    if (operator === 'AND') return leftResult && rightResult;
+  }
+
+  private matches(rowObject: Record<string, any>, where: WhereClause): boolean {
+    if (where.type === 'CONDITION') {
+      return this._evaluateConditionNode(rowObject, where);
+    }
+    if (where.type === 'LOGICAL') {
+      return this._evaluateLogicalNode(rowObject, where);
+    }
+    throw new Error('Invalid WHERE clause structure');
   }
 
   private async handleInsert(command: InsertCommand) {

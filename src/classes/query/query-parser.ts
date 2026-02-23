@@ -15,10 +15,11 @@ import {
 } from './query-types.js';
 import { QueryScanner } from './query-scanner.js';
 import { Column, DataType, Schema } from '../catalog.js';
+import { Parser } from './parser.js';
+import { ExpressionParser } from './expression-parser.js';
 
-export class QueryParser {
+export class QueryParser extends Parser {
   private scanner: Generator<Token>;
-  private lookahead: Token = null;
 
   parse(query: string): Command {
     this.scanner = new QueryScanner(query).iterator();
@@ -26,19 +27,8 @@ export class QueryParser {
     return this.buildCommand();
   }
 
-  private peek() {
-    return this.lookahead;
-  }
-
-  private consume({ type, value, next }: { type?: TokenType; value?: string; next?: TokenType } = {}) {
-    const token = this.lookahead;
-    if (!token) throw new Error(`Unexpected end of query`);
-    if (type && token.type !== type) {
-      throw new Error(`Unexpected token type: ${token.type}(${token.value}) instead of ${type}(_)`);
-    }
-    if (value && token.value !== value) {
-      throw new Error(`Unexpected token value: ${token.type}(${token.value}) instead of _(${value})`);
-    }
+  protected consume({ type, value, next }: { type?: TokenType; value?: string; next?: TokenType } = {}) {
+    const token = super.consume({ type, value });
     this.lookahead = this.scanner.next(next).value;
     return token;
   }
@@ -72,19 +62,6 @@ export class QueryParser {
     } while (true);
 
     return identifiers;
-  }
-
-  private _parseTypedValue() {
-    const token = this.consume();
-    if (token.type === 'NUMBER') {
-      return Number(token.value);
-    } else if (token.type === 'STRING') {
-      return token.value;
-    } else if (token.type === 'KEYWORD' && token.value === 'NULL') {
-      return null;
-    } else {
-      throw new Error(`Expected NUMBER or STRING in value list, but got ${token.type} (${token.value})`);
-    }
   }
 
   private _parseValuesList() {
@@ -132,21 +109,24 @@ export class QueryParser {
   }
 
   private _parseWhereClause(): WhereClause {
-    this.consume({ type: 'KEYWORD', value: 'WHERE', next: 'IDENTIFIER' });
-    const field = this.consume({ type: 'IDENTIFIER', next: 'OPERATOR' }).value;
-    let operator = this.consume({ type: 'OPERATOR' }).value;
-    if (operator === 'IS' && this.peek()?.value === 'NOT') {
-      this.consume({ type: 'KEYWORD', value: 'NOT' });
-      operator = 'IS NOT';
-    }
-    const value = this._parseTypedValue();
-    if (value != null && (operator === 'IS' || operator === 'IS NOT')) {
-      throw new Error(`Operator ${operator} only supports NULL`);
-    } else if (value == null && !(operator === 'IS' || operator === 'IS NOT')) {
-      throw new Error(`Operator ${operator} cannot be used with NULL`);
+    this.consume({ type: 'KEYWORD', value: 'WHERE' });
+
+    const expressionTokens: Token[] = [];
+    const terminatingKeywords = new Set(['ORDER BY', 'LIMIT']);
+
+    while (this.hasMoreTokens()) {
+      const token = this.peek();
+      if (token.type === 'IDENTIFIER' && terminatingKeywords.has(token.value)) {
+        break;
+      }
+      expressionTokens.push(this.consume());
     }
 
-    return { field, operator, value };
+    if (!expressionTokens.length) {
+      throw new Error('Syntax error: Unexpected end of query after WHERE clause');
+    }
+
+    return new ExpressionParser(expressionTokens).parse();
   }
 
   private _parseSetClause(): SetClause {
