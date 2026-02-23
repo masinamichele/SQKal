@@ -28,23 +28,22 @@ This file tracks the implementation progress of our database engine.
 
 - [x] **Query Engine**
   - [x] Refactor parser to be a two-stage (tokenizer/parser) process.
-  - [x] Implement `INSERT`, `SELECT` (with projection), `DELETE`, `CREATE TABLE`, and `UPDATE` commands.
+  - [x] Implement `INSERT` (with multi-row support), `SELECT` (with projection), `DELETE`, `CREATE TABLE`, and `UPDATE` commands.
   - [x] Implement `WHERE` clause with support for `=`, `<>`, `<`, `>`, `<=`, `>=`, `LIKE`, `IS NULL`, and `IS NOT NULL`.
   - [x] Implement `ORDER BY` (ASC/DESC) and `LIMIT` / `OFFSET` clauses for `SELECT`.
 
 - [x] **Architecture**
   - [x] Implement a Dependency Injection (DI) container to manage services.
+  - [x] Refactor tokenizer from regex to a predictive, stateful scanner.
 
 ## To Do
 
 - **Architecture**
-  - [ ] Refactor tokenizer from regex to a stateful scanner.
   - [ ] Implement a custom, numbered error system.
 
 - **Query Engine**
   - [ ] Implement Prepared Statements (parameterized queries) to prevent SQL injection.
   - [ ] Expand `WHERE` clause support for `AND` / `OR` conjunctions.
-  - [ ] Support multi-row `INSERT` statements.
   - [ ] Create a query planner.
 
 - **Production-Grade Features**

@@ -54,34 +54,44 @@ export class QueryScanner {
   constructor(private readonly query: string) {}
 
   *iterator(): Generator<Token> {
+    let hint: TokenType = null;
     while (this.hasMore) {
-      const token = this.nextToken();
-      if (token) yield token;
-      else break;
+      hint = yield this.nextToken(hint);
     }
   }
 
-  private nextToken() {
+  private nextToken(hint?: TokenType) {
     this._skipWhitespace();
     if (!this.hasMore) return null;
 
-    if (/[a-z]/i.test(this.char)) {
-      return this._handleWord();
+    const isAskingFor = (type: TokenType) => {
+      return !hint || hint === type;
+    };
+
+    const reserved = this._handleReservedWord();
+    if (reserved && isAskingFor(reserved.type)) return reserved;
+
+    if (isAskingFor('IDENTIFIER') && /[a-z]/i.test(this.char)) {
+      return this._handleIdentifier();
     }
-    if (/\d/.test(this.char)) {
+    if (isAskingFor('NUMBER') && /\d/.test(this.char)) {
       return this._handleNumber();
     }
-    if (this.char === "'") {
+    if (isAskingFor('STRING') && this.char === "'") {
       return this._handleString();
     }
-    if (/[,;()]/.test(this.char)) {
+    if (isAskingFor('PUNCTUATION') && /[,;()]/.test(this.char)) {
       return this._handlePunctuation();
     }
-    if (/[*=<>]/.test(this.char)) {
+    if (isAskingFor('OPERATOR') && /[*=<>]/.test(this.char)) {
       return this._handleSymbolOperator();
     }
 
-    throw new Error(`Syntax error: Unexpected token '${this.char}' at position ${this.cursor}`);
+    const hintMessage = hint ? ` (hint: ${hint})` : '';
+    let errorMessage = `Syntax error: Unexpected token '${this.char}' at position ${this.cursor}${hintMessage}`;
+    errorMessage += `\n${this.query}`;
+    errorMessage += `\n${' '.repeat(this.cursor)}^`;
+    throw new Error(errorMessage);
   }
 
   private _skipWhitespace() {
@@ -90,7 +100,7 @@ export class QueryScanner {
     }
   }
 
-  private _handleWord(): Token {
+  private _handleReservedWord(): Token {
     for (const word of SORTED_RESERVED_WORDS) {
       if (this.rest.startsWith(word)) {
         const nextChar = this.query[this.cursor + word.length];
@@ -100,7 +110,10 @@ export class QueryScanner {
         }
       }
     }
+    return null;
+  }
 
+  private _handleIdentifier(): Token {
     let value = '';
     while (this.hasMore && /\w/.test(this.char)) {
       value += this.char;

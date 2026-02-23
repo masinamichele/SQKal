@@ -11,7 +11,7 @@ console.log('Database opened successfully.');
 
 try {
   console.log('Creating table...');
-  await db.exec`CREATE TABLE users (id INT, name VARCHAR)`;
+  await db.exec`CREATE TABLE users (id INT NOT NULL, name VARCHAR)`;
 
   console.log('Inserting sample data...');
   const [insertResult] = await db.exec`INSERT INTO users VALUES (1, 'Alice'),
