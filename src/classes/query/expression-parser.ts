@@ -1,9 +1,9 @@
-import { Parser } from './parser.js';
-import { ConditionNode, Token, TokenType, WhereClause } from './query-types.js';
+import { BaseParser } from './base-parser.js';
+import { ConditionNode, Token, TokenType, WhereClause } from './types.js';
 
 const PRECEDENCE = <const>{ OR: 1, AND: 2 };
 
-export class ExpressionParser extends Parser {
+export class ExpressionParser extends BaseParser {
   private cursor = 0;
 
   constructor(private readonly tokens: Token[]) {

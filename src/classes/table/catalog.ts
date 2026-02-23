@@ -1,10 +1,10 @@
 import { Buffer } from 'node:buffer';
-import { CATALOG, sizeof_uint32, sizeof_uint8 } from '../const.js';
-import { Page } from './page.js';
+import { CATALOG, sizeof_uint32, sizeof_uint8 } from '../../const.js';
+import { Page } from '../storage/page.js';
 import { Table } from './table.js';
-import { BufferPoolManager } from './buffer-pool-manager.js';
-import { FreeSpaceMap } from './free-space-map.js';
-import { Injector } from './injector.js';
+import { BufferPoolManager } from '../storage/buffer-pool-manager.js';
+import { FreeSpaceMap } from '../storage/free-space-map.js';
+import { Injector } from '../injector.js';
 
 export enum DataType {
   NUMBER = 0x01,

@@ -1,5 +1,12 @@
 import { Buffer } from 'node:buffer';
-import { PAGE_HEADER_SIZE, LAST_PAGE_ID, PAGE_SIZE, sizeof_uint32, PAGE_SLOT_SIZE, sizeof_uint16 } from '../const.js';
+import {
+  PAGE_HEADER_SIZE,
+  LAST_PAGE_ID,
+  PAGE_SIZE,
+  sizeof_uint32,
+  PAGE_SLOT_SIZE,
+  sizeof_uint16,
+} from '../../const.js';
 
 export class Page {
   constructor(

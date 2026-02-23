@@ -1,6 +1,6 @@
 import { Buffer } from 'node:buffer';
-import { sizeof_uint32, sizeof_uint8 } from '../const.js';
-import { DataType, Schema } from './catalog.js';
+import { sizeof_uint32, sizeof_uint8 } from '../../const.js';
+import { DataType, Schema } from '../table/catalog.js';
 
 export class Serializer {
   static serialize(obj: Record<string, any>, schema: Schema): Buffer {

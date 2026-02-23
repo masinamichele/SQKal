@@ -9,10 +9,10 @@ import {
   SelectCommand,
   UpdateCommand,
   WhereClause,
-} from './query-types.js';
-import { Serializer } from '../serializer.js';
-import { BufferPoolManager } from '../buffer-pool-manager.js';
-import { Page } from '../page.js';
+} from './types.js';
+import { Serializer } from '../common/serializer.js';
+import { BufferPoolManager } from '../storage/buffer-pool-manager.js';
+import { Page } from '../storage/page.js';
 import { Injector } from '../injector.js';
 import { Buffer } from 'node:buffer';
 

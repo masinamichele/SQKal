@@ -1,10 +1,10 @@
-import { DiskManager } from './disk-manager.js';
-import { Catalog, Schema } from './catalog.js';
+import { DiskManager } from './storage/disk-manager.js';
+import { Catalog, Schema } from './table/catalog.js';
 import { BUFFER_POOL_SIZE, CATALOG, FSM } from '../const.js';
-import { BufferPoolManager } from './buffer-pool-manager.js';
-import { QueryParser } from './query/query-parser.js';
-import { QueryRunner } from './query/query-runner.js';
-import { FreeSpaceMap } from './free-space-map.js';
+import { BufferPoolManager } from './storage/buffer-pool-manager.js';
+import { QueryParser } from './query/parser.js';
+import { QueryRunner } from './query/runner.js';
+import { FreeSpaceMap } from './storage/free-space-map.js';
 import { Injector } from './injector.js';
 
 export class Database {

@@ -1,4 +1,4 @@
-import { Schema } from '../catalog.js';
+import { Schema } from '../table/catalog.js';
 
 export type ValueType = string | number | null;
 

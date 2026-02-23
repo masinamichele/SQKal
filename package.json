@@ -15,9 +15,6 @@
   "author": "",
   "license": "ISC",
   "type": "module",
-  "dependencies": {
-    "dotenv": "^17.3.1"
-  },
   "devDependencies": {
     "@types/node": "^24.10.13",
     "nodemon": "^3.1.11",

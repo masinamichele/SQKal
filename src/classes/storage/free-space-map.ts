@@ -1,8 +1,8 @@
 import { BufferPoolManager } from './buffer-pool-manager.js';
 import { Buffer } from 'node:buffer';
 import { Page } from './page.js';
-import { FSM, sizeof_uint16 } from '../const.js';
-import { Injector } from './injector.js';
+import { FSM, sizeof_uint16 } from '../../const.js';
+import { Injector } from '../injector.js';
 
 export class FreeSpaceMap {
   private readonly injector = Injector.getInstance();

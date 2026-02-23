@@ -1,9 +1,9 @@
 import { Buffer } from 'node:buffer';
-import { LAST_PAGE_ID, PAGE_SLOT_SIZE } from '../const.js';
-import { Page } from './page.js';
-import { BufferPoolManager } from './buffer-pool-manager.js';
-import { FreeSpaceMap } from './free-space-map.js';
-import { Injector } from './injector.js';
+import { LAST_PAGE_ID, PAGE_SLOT_SIZE } from '../../const.js';
+import { Page } from '../storage/page.js';
+import { BufferPoolManager } from '../storage/buffer-pool-manager.js';
+import { FreeSpaceMap } from '../storage/free-space-map.js';
+import { Injector } from '../injector.js';
 
 export class Table {
   private readonly injector = Injector.getInstance();

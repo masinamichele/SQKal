@@ -1,4 +1,4 @@
-import { Token, TokenType } from './query-types.js';
+import { Token, TokenType } from './types.js';
 
 export const RESERVED_WORDS = new Map<string, TokenType>([
   // Multi-word Keywords
@@ -32,7 +32,7 @@ export const RESERVED_WORDS = new Map<string, TokenType>([
 
 const SORTED_RESERVED_WORDS = Array.from(RESERVED_WORDS.keys()).sort((a, b) => b.length - a.length);
 
-export class QueryScanner {
+export class Scanner {
   private cursor = 0;
 
   private get char() {

@@ -1,8 +1,8 @@
 import { Buffer } from 'node:buffer';
 import { DiskManager } from './disk-manager.js';
-import { PAGE_SIZE } from '../const.js';
-import { DoublyLinkedList } from './doubly-linked-list.js';
-import { Injector } from './injector.js';
+import { PAGE_SIZE } from '../../const.js';
+import { DoublyLinkedList } from '../common/doubly-linked-list.js';
+import { Injector } from '../injector.js';
 
 export class BufferPoolManager {
   private readonly pool: Buffer[] = [];
