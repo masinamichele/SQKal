@@ -24,6 +24,7 @@ export const PAGE_SLOT_SIZE = 2 * sizeof_uint32;
 
 export const CATALOG = 0;
 export const FSM = 1;
+export const PAGE_DIRECTORY = 2;
 
 export const LAST_PAGE_ID = 2 ** 32 - 1;
 

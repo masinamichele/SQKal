@@ -1,10 +1,15 @@
 import { FileHandle, open } from 'node:fs/promises';
 import assert from 'node:assert/strict';
 import { Buffer } from 'node:buffer';
-import { PAGE_SIZE } from '../../const.js';
+import { CATALOG, FSM, PAGE_DIRECTORY, PAGE_SIZE } from '../../const.js';
+import { PageDirectory, PageLocation } from './page-directory.js';
+import { Archiver } from '../common/archiver.js';
+
+const RESERVED_PAGES = new Set([CATALOG, FSM, PAGE_DIRECTORY]);
 
 export class DiskManager {
   private handle: FileHandle;
+  readonly pageDirectory = new PageDirectory();
 
   constructor(private readonly path: string) {}
 
@@ -23,6 +28,9 @@ export class DiskManager {
         throw error;
       }
     }
+
+    const directoryBuffer = await this.readPage(PAGE_DIRECTORY);
+    this.pageDirectory.deserialize(directoryBuffer);
   }
 
   async close() {
@@ -31,19 +39,48 @@ export class DiskManager {
 
   async writePage(id: number, data: Buffer) {
     assert(data.length === PAGE_SIZE, `Data buffer must be ${PAGE_SIZE} bytes`);
-    const offset = id * PAGE_SIZE;
-    await this.handle.write(data, 0, PAGE_SIZE, offset);
+
+    const location: PageLocation = { offset: 0, length: 0 };
+    if (RESERVED_PAGES.has(id)) {
+      location.offset = id * PAGE_SIZE;
+      location.length = PAGE_SIZE;
+      await this.handle.write(data, 0, location.length, location.offset);
+    } else {
+      const compressedData = Archiver.compress(data);
+      const stats = await this.handle.stat();
+      location.offset = stats.size;
+      location.length = compressedData.length;
+      await this.handle.write(compressedData, 0, location.length, location.offset);
+    }
+
+    this.pageDirectory.set(id, location);
+    const directoryBuffer = this.pageDirectory.serialize();
+    await this.handle.write(directoryBuffer, 0, PAGE_SIZE, PAGE_DIRECTORY * PAGE_SIZE);
   }
 
   async readPage(id: number, buffer: Buffer = Buffer.alloc(PAGE_SIZE)) {
-    const offset = id * PAGE_SIZE;
-    await this.handle.read(buffer, 0, PAGE_SIZE, offset);
+    if (RESERVED_PAGES.has(id)) {
+      const offset = id * PAGE_SIZE;
+      const stats = await this.handle.stat();
+      if (offset < stats.size) {
+        await this.handle.read(buffer, 0, PAGE_SIZE, offset);
+      }
+    } else {
+      const location = this.pageDirectory.get(id);
+      if (!location) throw new Error(`Page ${id} not found`);
+
+      const compressedBuffer = Buffer.alloc(location.length);
+      await this.handle.read(compressedBuffer, 0, location.length, location.offset);
+
+      const decompressedData = Archiver.decompress(compressedBuffer);
+      decompressedData.copy(buffer);
+    }
+
     return buffer;
   }
 
   async allocatePage() {
-    const stats = await this.handle.stat();
-    const pageId = stats.size / PAGE_SIZE;
+    const pageId = this.pageDirectory.size;
     const buffer = Buffer.alloc(PAGE_SIZE);
     return { pageId, buffer };
   }

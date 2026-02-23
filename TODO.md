@@ -36,6 +36,9 @@ This file tracks the implementation progress of our database engine.
   - [x] Implement a Dependency Injection (DI) container to manage services.
   - [x] Refactor tokenizer from regex to a predictive, stateful scanner.
 
+- [x] **Advanced Features**
+  - [x] Implement data compression for rows.
+
 ## To Do
 
 - **Architecture**
@@ -55,5 +58,4 @@ This file tracks the implementation progress of our database engine.
   - [ ] Enhance `Table.vacuum()` to merge half-empty pages and return reclaimed pages to the global list.
 
 - **Advanced Features**
-  - [ ] Implement data compression for rows.
   - [ ] Implement TOAST (The oversized-Attribute Storage Technique) for handling data larger than a single page.

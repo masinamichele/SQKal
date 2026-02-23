@@ -1,11 +1,12 @@
 import { DiskManager } from './storage/disk-manager.js';
 import { Catalog, Schema } from './table/catalog.js';
-import { BUFFER_POOL_SIZE, CATALOG, FSM } from '../const.js';
+import { BUFFER_POOL_SIZE, CATALOG, FSM, PAGE_DIRECTORY, PAGE_SIZE } from '../const.js';
 import { BufferPoolManager } from './storage/buffer-pool-manager.js';
 import { QueryParser } from './query/parser.js';
 import { QueryRunner } from './query/runner.js';
 import { FreeSpaceMap } from './storage/free-space-map.js';
 import { Injector } from './injector.js';
+import { Buffer } from 'node:buffer';
 
 export class Database {
   private static instance: Database;
@@ -35,19 +36,16 @@ export class Database {
   async open() {
     await this.diskManager.open();
 
-    const setupReservedPage = async (reservedId: number) => {
-      const { pageId, buffer } = await this.bpm.newPage();
-      if (pageId !== reservedId) {
-        throw new Error(`Database initialization failed: created page was ${pageId} instead of ${reservedId}`);
-      }
-      return buffer;
-    };
-
     if ((await this.diskManager.size()) === 0) {
-      const catalog = await setupReservedPage(CATALOG);
+      const catalog = Buffer.alloc(PAGE_SIZE);
       await this.catalog.initialize(catalog);
-      const fsm = await setupReservedPage(FSM);
+      await this.diskManager.writePage(CATALOG, catalog);
+      this.diskManager.pageDirectory.set(CATALOG, { offset: CATALOG * PAGE_SIZE, length: PAGE_SIZE });
+
+      const fsm = Buffer.alloc(PAGE_SIZE);
       await this.fsm.initialize(fsm);
+      await this.diskManager.writePage(FSM, fsm);
+      this.diskManager.pageDirectory.set(CATALOG, { offset: CATALOG * PAGE_SIZE, length: PAGE_SIZE });
     }
   }
 
