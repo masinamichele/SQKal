@@ -22,9 +22,9 @@ export const PAGE_HEADER_SIZE = 4 * sizeof_uint32;
  */
 export const PAGE_SLOT_SIZE = 2 * sizeof_uint32;
 
-export const CATALOG = 0;
-export const FSM = 1;
-export const PAGE_DIRECTORY = 2;
+export const PAGE_DIRECTORY = 0;
+export const CATALOG = 1;
+export const FSM = 2;
 
 export const LAST_PAGE_ID = 2 ** 32 - 1;
 
@@ -42,8 +42,14 @@ export const BUFFER_POOL_SIZE = 10;
  * -----------------------------------------------------------
  * COLUMN DEFINITION (variable size)
  * -----------------------------------------------------------
- * | colNameLength (1) | colName (var) | colType (1) | | nullableFlag (1) |
+ * | colNameLength (1) | colName (var) | colType (1) | | flags (1) |
  * -----------------------------------------------------------
+ *
+ * FLAGS (1 byte bitmask):
+ * - Bit 0 (0x01): isNullable
+ * - Bit 1 (0x02): isPrimaryKey
+ * - Bit 2 (0x04): isAutoIncrement
+ * - Bit 3 (0x08): isUnique
  */
 
 /**

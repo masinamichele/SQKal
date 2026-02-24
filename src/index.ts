@@ -1,17 +1,12 @@
 import { Database } from './classes/database.js';
-import { join } from 'node:path';
-import { rm } from 'node:fs/promises';
 import { test, describe, before, after } from 'node:test';
 import assert from 'node:assert/strict';
 
 describe('Database Engine Integration Tests', () => {
-  const dbPath = join(import.meta.dirname, '../db/main.db');
   let db: Database;
 
   before(async () => {
-    await rm(dbPath, { force: true });
-    console.log('[debug] Previous database deleted');
-    db = Database.getInstance(dbPath);
+    db = new Database('main.db', { clean: true, compression: null });
     await db.open();
     console.log('Database opened successfully');
   });
@@ -140,6 +135,53 @@ describe('Database Engine Integration Tests', () => {
 
       const contains = await db.exec`SELECT name FROM users WHERE name LIKE '%a%'`;
       assert.deepStrictEqual(contains.map((r) => r.name).sort(), ['Ally', 'Charlie', 'David'], "LIKE '%a%' failed");
+    });
+  });
+
+  describe('Constraints', () => {
+    test('should fail to insert a duplicate PRIMARY KEY', async () => {
+      await db.exec`CREATE TABLE pk_test (id INT PRIMARY KEY, name VARCHAR)`;
+      await db.exec`INSERT INTO pk_test VALUES (1, 'one')`;
+      await assert.rejects(
+        db.exec`INSERT INTO pk_test VALUES (1, 'one-duplicate')`,
+        { message: /UNIQUE constraint failed for id: 1/ },
+        'Should throw on duplicate PRIMARY KEY',
+      );
+    });
+
+    test('should fail to insert a duplicate UNIQUE value', async () => {
+      await db.exec`CREATE TABLE unique_test (id INT, name VARCHAR UNIQUE)`;
+      await db.exec`INSERT INTO unique_test VALUES (1, 'unique-name')`;
+      await assert.rejects(
+        db.exec`INSERT INTO unique_test VALUES (2, 'unique-name')`,
+        { message: /UNIQUE constraint failed for name: unique-name/ },
+        'Should throw on duplicate UNIQUE value',
+      );
+    });
+
+    test('should fail to insert NULL into a NOT NULL column', async () => {
+      await assert.rejects(
+        db.exec`INSERT INTO users VALUES (NULL, 'should-fail')`,
+        { message: /column 'id' cannot be null/ },
+        'Should throw on NOT NULL violation',
+      );
+    });
+
+    test('should correctly handle AUTOINCREMENT', async () => {
+      await db.exec`CREATE TABLE auto_test (id INT PRIMARY KEY AUTOINCREMENT, name VARCHAR)`;
+
+      await db.exec`INSERT INTO auto_test VALUES (NULL, 'first')`;
+      const first = await db.exec`SELECT id FROM auto_test WHERE name = 'first'`;
+      assert.deepStrictEqual(first, [{ id: 1 }], 'First AUTOINCREMENT value should be 1');
+
+      await db.exec`INSERT INTO auto_test VALUES (NULL, 'second')`;
+      const second = await db.exec`SELECT id FROM auto_test WHERE name = 'second'`;
+      assert.deepStrictEqual(second, [{ id: 2 }], 'Second AUTOINCREMENT value should be 2');
+      await db.exec`INSERT INTO auto_test VALUES (5, 'five')`;
+
+      await db.exec`INSERT INTO auto_test VALUES (NULL, 'six')`;
+      const sixth = await db.exec`SELECT id FROM auto_test WHERE name = 'six'`;
+      assert.deepStrictEqual(sixth, [{ id: 6 }], 'AUTOINCREMENT should continue from the highest existing value');
     });
   });
 });

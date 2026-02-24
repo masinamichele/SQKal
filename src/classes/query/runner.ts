@@ -15,6 +15,8 @@ import { BufferPoolManager } from '../storage/buffer-pool-manager.js';
 import { Page } from '../storage/page.js';
 import { Injector } from '../injector.js';
 import { Buffer } from 'node:buffer';
+import { Table } from '../table/table.js';
+import { Schema } from '../table/catalog.js';
 
 export class QueryRunner {
   private readonly injector = Injector.getInstance();
@@ -105,6 +107,15 @@ export class QueryRunner {
     if (operator === 'AND') return leftResult && rightResult;
   }
 
+  private async _checkUniqueness(table: Table, schema: Schema, columnName: string, value: any) {
+    for await (const { buffer } of table.scan()) {
+      const rowObject = Serializer.deserialize(buffer, schema);
+      if (rowObject[columnName] === value) {
+        throw new Error(`Constraint violation: UNIQUE constraint failed for ${columnName}: ${value}`);
+      }
+    }
+  }
+
   private matches(rowObject: Record<string, any>, where: WhereClause): boolean {
     if (where.type === 'CONDITION') {
       return this._evaluateConditionNode(rowObject, where);
@@ -118,26 +129,56 @@ export class QueryRunner {
   private async handleInsert(command: InsertCommand) {
     const { table, schema } = await this.getCommandEntities(command);
 
-    const buffersToInsert: Buffer[] = [];
+    const autoIncrementColumn = schema.find((col) => col.autoIncrement);
+    let nextAutoIncrementId = 1;
+    if (autoIncrementColumn) {
+      let maxId = 0;
+      for await (const { buffer } of table.scan()) {
+        const rowObject = Serializer.deserialize(buffer, schema);
+        const id = rowObject[autoIncrementColumn.name];
+        if (id > maxId) maxId = id;
+      }
+      nextAutoIncrementId = maxId + 1;
+    }
 
+    const rowsToInsert: Record<string, any>[] = [];
     for (const values of command.values) {
       const data: Record<string, any> = {};
-      schema.forEach((column, index) => {
-        const value = values[index];
+      for (const [index, column] of schema.entries()) {
+        let value = values[index];
+        if (column.autoIncrement && value == null) {
+          value = nextAutoIncrementId++;
+        }
+        data[column.name] = value;
+      }
+      rowsToInsert.push(data);
+    }
+
+    for (const data of rowsToInsert) {
+      for (const column of schema) {
+        const value = data[column.name];
+
         if (!column.nullable && value == null) {
           throw new Error(`Constraint violation: column '${column.name}' cannot be null`);
         }
-        data[column.name] = value;
-      });
-      const rowBuffer = Serializer.serialize(data, schema);
-      buffersToInsert.push(rowBuffer);
+        if (value != null && column.unique) {
+          await this._checkUniqueness(table, schema, column.name, value);
+          const duplicatesInBatch = rowsToInsert.filter((r) => r[column.name] === value);
+          if (duplicatesInBatch.length > 1) {
+            throw new Error(
+              `Constraint violation: UNIQUE constraint failed for ${column.name}: ${value} (duplicate value in same insert)`,
+            );
+          }
+        }
+      }
     }
 
-    for (const buffer of buffersToInsert) {
+    for (const row of rowsToInsert) {
+      const buffer = Serializer.serialize(row, schema);
       await table.insert(buffer);
     }
 
-    return [buffersToInsert.length];
+    return [rowsToInsert.length];
   }
 
   private async handleSelect(command: SelectCommand) {
@@ -145,8 +186,8 @@ export class QueryRunner {
 
     let results: Record<string, any>[] = [];
 
-    for await (const rowBuffer of table.scan()) {
-      const rowObject = Serializer.deserialize(rowBuffer, schema);
+    for await (const { buffer } of table.scan()) {
+      const rowObject = Serializer.deserialize(buffer, schema);
 
       if (command.where) {
         if (!this.matches(rowObject, command.where)) continue;
@@ -185,7 +226,7 @@ export class QueryRunner {
 
     const locationToDelete: { pageId: number; rowIndex: number }[] = [];
 
-    for await (const { buffer, pageId, rowIndex } of table.scanWithLocation()) {
+    for await (const { buffer, pageId, rowIndex } of table.scan()) {
       const rowObject = Serializer.deserialize(buffer, schema);
       if (this.matches(rowObject, command.where)) {
         locationToDelete.push({ pageId, rowIndex });
@@ -220,9 +261,12 @@ export class QueryRunner {
 
   private async handleUpdate(command: UpdateCommand) {
     const { table, schema } = await this.getCommandEntities(command);
+
+    // TODO: enforce column constraints
+
     const rowsToUpdate: Record<string, any>[] = [];
-    for await (const rowBuffer of table.scan()) {
-      const rowObject = Serializer.deserialize(rowBuffer, schema);
+    for await (const { buffer } of table.scan()) {
+      const rowObject = Serializer.deserialize(buffer, schema);
       if (this.matches(rowObject, command.where)) {
         rowsToUpdate.push(rowObject);
       }

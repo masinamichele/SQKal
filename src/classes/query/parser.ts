@@ -93,19 +93,59 @@ export class QueryParser extends BaseParser {
         throw new Error(`Unknown column type: ${typeToken}`);
     }
 
-    let nullable = true;
-    const nextToken = this.peek();
-    if (nextToken?.type === 'KEYWORD') {
-      if (nextToken.value === 'NULL') {
-        this.consume({ type: 'KEYWORD', value: 'NULL' });
-      } else if (nextToken.value === 'NOT') {
-        this.consume({ type: 'KEYWORD', value: 'NOT' });
-        this.consume({ type: 'KEYWORD', value: 'NULL' });
-        nullable = false;
+    const column: Column = {
+      name,
+      type,
+      nullable: true,
+      primaryKey: false,
+      autoIncrement: false,
+      unique: false,
+    };
+
+    let nullableExplicitlySet = false;
+    if (this.peek()?.value === 'NOT') {
+      this.consume({ type: 'KEYWORD', value: 'NOT' });
+      this.consume({ type: 'KEYWORD', value: 'NULL' });
+      column.nullable = false;
+      nullableExplicitlySet = true;
+    } else if (this.peek()?.value === 'NULL') {
+      this.consume({ type: 'KEYWORD', value: 'NULL' });
+      column.nullable = true;
+      nullableExplicitlySet = true;
+    }
+
+    const constraintKeywords = new Set(['PRIMARY KEY', 'AUTOINCREMENT', 'UNIQUE']);
+
+    while (this.peek()?.type === 'KEYWORD' && constraintKeywords.has(this.peek()?.value)) {
+      switch (this.peek().value) {
+        case 'PRIMARY KEY':
+          this.consume({ type: 'KEYWORD', value: 'PRIMARY KEY' });
+          if (nullableExplicitlySet && column.nullable) {
+            throw new Error(`Syntax error: Column '${name}' with PRIMARY KEY constraint cannot be nullable`);
+          }
+          column.primaryKey = true;
+          column.nullable = false;
+          column.unique = true;
+          break;
+        case 'AUTOINCREMENT':
+          this.consume({ type: 'KEYWORD', value: 'AUTOINCREMENT' });
+          column.autoIncrement = true;
+          break;
+        case 'UNIQUE':
+          this.consume({ type: 'KEYWORD', value: 'UNIQUE' });
+          column.unique = true;
+          break;
       }
     }
 
-    return { name, type, nullable };
+    if (column.autoIncrement && (!column.primaryKey || column.type !== DataType.NUMBER)) {
+      throw new Error('AUTOINCREMENT can only be used on an INTEGER PRIMARY KEY column.');
+    }
+    if (column.primaryKey && column.nullable) {
+      throw new Error('PRIMARY KEY columns cannot be nullable.');
+    }
+
+    return column;
   }
 
   private _parseWhereClause(): WhereClause {

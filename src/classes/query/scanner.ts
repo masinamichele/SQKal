@@ -22,6 +22,9 @@ export const RESERVED_WORDS = new Map<string, TokenType>([
   ['OFFSET', 'KEYWORD'],
   ['NULL', 'KEYWORD'],
   ['NOT', 'KEYWORD'],
+  ['PRIMARY KEY', 'KEYWORD'],
+  ['AUTOINCREMENT', 'KEYWORD'],
+  ['UNIQUE', 'KEYWORD'],
 
   // Operators that are words
   ['LIKE', 'OPERATOR'],

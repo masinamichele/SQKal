@@ -12,7 +12,7 @@ export class Table {
 
   constructor(private readonly firstPageId: number) {}
 
-  async *scanWithLocation() {
+  async *scan() {
     let id = this.firstPageId;
     while (id !== LAST_PAGE_ID) {
       const pageBuffer = await this.bpm.fetchPage(id);
@@ -30,22 +30,17 @@ export class Table {
     }
   }
 
-  async *scan() {
-    for await (const { buffer } of this.scanWithLocation()) {
-      yield buffer;
-    }
-  }
-
   async insert(row: Buffer) {
     const requiredSpace = row.length + PAGE_SLOT_SIZE;
 
-    const pageIdFromFsm = await this.fsm.findPage(requiredSpace);
+    const pageIdFromFsm = await this.fsm.findPage(requiredSpace, this.firstPageId);
 
     if (pageIdFromFsm != null) {
       const pageBuffer = await this.bpm.fetchPage(pageIdFromFsm);
       if (pageBuffer) {
         const page = new Page(pageBuffer, pageIdFromFsm);
-        if (page.insertRow(row) !== null) {
+        let temp = page.insertRow(row);
+        if (temp !== null) {
           await this.fsm.update(page.id, page.totalFreeSpace);
           this.bpm.unpin(pageIdFromFsm, true);
           return;
@@ -86,7 +81,7 @@ export class Table {
   }
 
   async delete(row: Buffer) {
-    for await (const { buffer, rowIndex, pageId } of this.scanWithLocation()) {
+    for await (const { buffer, rowIndex, pageId } of this.scan()) {
       if (row.equals(buffer)) {
         const pageBuffer = await this.bpm.fetchPage(pageId);
         const page = new Page(pageBuffer, pageId);

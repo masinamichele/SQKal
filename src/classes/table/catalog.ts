@@ -11,10 +11,22 @@ export enum DataType {
   STRING = 0x02,
 }
 
+export enum Flags {
+  IS_NULLABLE = 0x01,
+  IS_PRIMARY_KEY = 0x02,
+  IS_AUTO_INCREMENT = 0x04,
+  IS_UNIQUE = 0x08,
+}
+
+export const hasFlag = (flags: number, flag: Flags) => (flags & flag) === flag;
+
 export type Column = {
   name: string;
   type: DataType;
   nullable: boolean;
+  primaryKey: boolean;
+  autoIncrement: boolean;
+  unique: boolean;
 };
 
 export type Schema = Column[];
@@ -65,9 +77,16 @@ export class Catalog {
       offset += columnNameLength;
       const columnType = row.readUInt8(offset);
       offset += sizeof_uint8;
-      const nullableFlag = row.readUInt8(offset);
+      const flags = row.readUInt8(offset);
       offset += sizeof_uint8;
-      schema.push({ name: columnName, type: columnType, nullable: nullableFlag === 0x01 });
+      schema.push({
+        name: columnName,
+        type: columnType,
+        nullable: hasFlag(flags, Flags.IS_NULLABLE),
+        primaryKey: hasFlag(flags, Flags.IS_PRIMARY_KEY),
+        autoIncrement: hasFlag(flags, Flags.IS_AUTO_INCREMENT),
+        unique: hasFlag(flags, Flags.IS_UNIQUE),
+      });
     }
     return schema;
   }
@@ -98,9 +117,14 @@ export class Catalog {
       typeBuffer.writeUInt8(column.type);
       const nameLengthBuffer = Buffer.alloc(sizeof_uint8);
       nameLengthBuffer.writeUInt8(nameBuffer.length);
-      const nullableFlagBuffer = Buffer.alloc(sizeof_uint8);
-      nullableFlagBuffer.writeUInt8(column.nullable ? 0x01 : 0x00);
-      return Buffer.concat([nameLengthBuffer, nameBuffer, typeBuffer, nullableFlagBuffer]);
+      const flagsBuffer = Buffer.alloc(sizeof_uint8);
+      let flags = 0;
+      if (column.nullable) flags |= Flags.IS_NULLABLE;
+      if (column.primaryKey) flags |= Flags.IS_PRIMARY_KEY;
+      if (column.autoIncrement) flags |= Flags.IS_AUTO_INCREMENT;
+      if (column.unique) flags |= Flags.IS_UNIQUE;
+      flagsBuffer.writeUInt8(flags);
+      return Buffer.concat([nameLengthBuffer, nameBuffer, typeBuffer, flagsBuffer]);
     });
     const columnsBuffer = Buffer.concat(columnBuffers);
 

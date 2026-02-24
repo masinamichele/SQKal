@@ -4,11 +4,13 @@ import { Buffer } from 'node:buffer';
 import { CATALOG, FSM, PAGE_DIRECTORY, PAGE_SIZE } from '../../const.js';
 import { PageDirectory, PageLocation } from './page-directory.js';
 import { Archiver } from '../common/archiver.js';
+import { Injector } from '../injector.js';
 
 const RESERVED_PAGES = new Set([CATALOG, FSM, PAGE_DIRECTORY]);
 
 export class DiskManager {
   private handle: FileHandle;
+  private readonly injector = Injector.getInstance();
   readonly pageDirectory = new PageDirectory();
 
   constructor(private readonly path: string) {}
@@ -46,7 +48,7 @@ export class DiskManager {
       location.length = PAGE_SIZE;
       await this.handle.write(data, 0, location.length, location.offset);
     } else {
-      const compressedData = Archiver.compress(data);
+      const compressedData = this.injector.resolve(Archiver).compress(data);
       const stats = await this.handle.stat();
       location.offset = stats.size;
       location.length = compressedData.length;
@@ -72,7 +74,7 @@ export class DiskManager {
       const compressedBuffer = Buffer.alloc(location.length);
       await this.handle.read(compressedBuffer, 0, location.length, location.offset);
 
-      const decompressedData = Archiver.decompress(compressedBuffer);
+      const decompressedData = this.injector.resolve(Archiver).decompress(compressedBuffer);
       decompressedData.copy(buffer);
     }
 

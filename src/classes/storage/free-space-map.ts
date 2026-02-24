@@ -1,7 +1,7 @@
 import { BufferPoolManager } from './buffer-pool-manager.js';
 import { Buffer } from 'node:buffer';
 import { Page } from './page.js';
-import { FSM, sizeof_uint16 } from '../../const.js';
+import { FSM, LAST_PAGE_ID, sizeof_uint16 } from '../../const.js';
 import { Injector } from '../injector.js';
 
 export class FreeSpaceMap {
@@ -40,12 +40,26 @@ export class FreeSpaceMap {
     }
   }
 
-  async findPage(requiredBytes: number) {
+  async findPage(requiredBytes: number, startPageId?: number) {
     const fsmBuffer = await this.bpm.fetchPage(FSM);
     try {
-      for (let offset = 0; offset < fsmBuffer.length; offset += sizeof_uint16) {
-        if (fsmBuffer.readUint16BE(offset) >= requiredBytes) {
-          return offset / sizeof_uint16;
+      if (startPageId == null) {
+        for (let offset = 0; offset < fsmBuffer.length; offset += sizeof_uint16) {
+          if (fsmBuffer.readUint16BE(offset) >= requiredBytes) {
+            return offset / sizeof_uint16;
+          }
+        }
+      } else {
+        let currentPageId = startPageId;
+        while (currentPageId !== LAST_PAGE_ID) {
+          const offset = currentPageId * sizeof_uint16;
+          if (offset + sizeof_uint16 <= fsmBuffer.length && fsmBuffer.readUint16BE(offset) >= requiredBytes) {
+            return currentPageId;
+          }
+          const pageBuffer = await this.bpm.fetchPage(currentPageId);
+          const page = new Page(pageBuffer, currentPageId);
+          this.bpm.unpin(currentPageId, false);
+          currentPageId = page.nextPageId;
         }
       }
     } finally {

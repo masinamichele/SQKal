@@ -1,20 +1,24 @@
 import { DiskManager } from './storage/disk-manager.js';
 import { Catalog, Schema } from './table/catalog.js';
-import { BUFFER_POOL_SIZE, CATALOG, FSM, PAGE_SIZE } from '../const.js';
+import { BUFFER_POOL_SIZE, CATALOG, FSM, PAGE_DIRECTORY, PAGE_SIZE } from '../const.js';
 import { BufferPoolManager } from './storage/buffer-pool-manager.js';
 import { QueryParser } from './query/parser.js';
 import { QueryRunner } from './query/runner.js';
 import { FreeSpaceMap } from './storage/free-space-map.js';
 import { Injector } from './injector.js';
 import { Buffer } from 'node:buffer';
+import { isAbsolute, join, dirname } from 'node:path';
+import { rmSync } from 'node:fs';
+import { Archiver } from './common/archiver.js';
+
+type DatabaseOptions = Partial<{
+  clean: boolean;
+  compression: 'gzip' | 'brotli' | null;
+}>;
+
+let databaseCreated = false;
 
 export class Database {
-  private static instance: Database;
-  static getInstance(path: string) {
-    if (!this.instance) this.instance = new Database(path);
-    return this.instance;
-  }
-
   private readonly injector = Injector.getInstance();
 
   private readonly diskManager: DiskManager;
@@ -24,28 +28,46 @@ export class Database {
   private readonly queryParser: QueryParser;
   private readonly queryRunner: QueryRunner;
 
-  private constructor(private readonly path: string) {
+  constructor(
+    private readonly path: string,
+    { clean = false, compression = 'brotli' }: DatabaseOptions,
+  ) {
+    if (databaseCreated) {
+      throw new Error('Only one instance of Database may exist');
+    }
+    if (!isAbsolute(this.path)) {
+      this.path = join(dirname(process.env.npm_package_json), 'db', this.path);
+    }
+    if (clean) {
+      try {
+        rmSync(this.path);
+        console.log('[debug] Previous database deleted');
+      } catch {}
+    }
+    this.injector.register(Archiver, [compression]);
     this.diskManager = this.injector.register(DiskManager, [this.path]);
     this.bpm = this.injector.register(BufferPoolManager, [BUFFER_POOL_SIZE]);
     this.fsm = this.injector.register(FreeSpaceMap, []);
     this.catalog = this.injector.register(Catalog, []);
     this.queryParser = this.injector.register(QueryParser, []);
     this.queryRunner = this.injector.register(QueryRunner, [this]);
+    databaseCreated = true;
   }
 
   async open() {
     await this.diskManager.open();
 
     if ((await this.diskManager.size()) === 0) {
+      const directory = Buffer.alloc(PAGE_SIZE);
+      await this.diskManager.writePage(PAGE_DIRECTORY, directory);
+
       const catalog = Buffer.alloc(PAGE_SIZE);
       await this.catalog.initialize(catalog);
       await this.diskManager.writePage(CATALOG, catalog);
-      this.diskManager.pageDirectory.set(CATALOG, { offset: CATALOG * PAGE_SIZE, length: PAGE_SIZE });
 
       const fsm = Buffer.alloc(PAGE_SIZE);
       await this.fsm.initialize(fsm);
       await this.diskManager.writePage(FSM, fsm);
-      this.diskManager.pageDirectory.set(CATALOG, { offset: CATALOG * PAGE_SIZE, length: PAGE_SIZE });
     }
   }
 
