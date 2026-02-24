@@ -35,14 +35,12 @@ This file tracks the implementation progress of our database engine.
 - [x] **Architecture**
   - [x] Implement a Dependency Injection (DI) container to manage services.
   - [x] Refactor tokenizer from regex to a predictive, stateful scanner.
+  - [x] Implement a custom, numbered error system.
 
 - [x] **Advanced Features**
   - [x] Implement data compression for rows.
 
 ## To Do
-
-- **Architecture**
-  - [ ] Implement a custom, numbered error system.
 
 - **Query Engine**
   - [ ] Implement Prepared Statements (parameterized queries) to prevent SQL injection.
