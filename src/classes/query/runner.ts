@@ -166,7 +166,7 @@ export class QueryRunner {
           await this._checkUniqueness(table, schema, column.name, value);
           const duplicatesInBatch = rowsToInsert.filter((r) => r[column.name] === value);
           if (duplicatesInBatch.length > 1) {
-            throw new Exception('E202', `${column.name}: ${value}`);
+            throw new Exception('E302', `${column.name}: ${value}`);
           }
         }
       }

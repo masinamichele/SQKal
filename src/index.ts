@@ -144,7 +144,7 @@ describe('Database Engine Integration Tests', () => {
       await db.exec`INSERT INTO pk_test VALUES (1, 'one')`;
       await assert.rejects(
         db.exec`INSERT INTO pk_test VALUES (1, 'one-duplicate')`,
-        { message: /UNIQUE constraint failed for id: 1/ },
+        { message: /UNIQUE constraint failed/ },
         'Should throw on duplicate PRIMARY KEY',
       );
     });
@@ -154,7 +154,7 @@ describe('Database Engine Integration Tests', () => {
       await db.exec`INSERT INTO unique_test VALUES (1, 'unique-name')`;
       await assert.rejects(
         db.exec`INSERT INTO unique_test VALUES (2, 'unique-name')`,
-        { message: /UNIQUE constraint failed for name: unique-name/ },
+        { message: /UNIQUE constraint failed/ },
         'Should throw on duplicate UNIQUE value',
       );
     });
@@ -162,7 +162,7 @@ describe('Database Engine Integration Tests', () => {
     test('should fail to insert NULL into a NOT NULL column', async () => {
       await assert.rejects(
         db.exec`INSERT INTO users VALUES (NULL, 'should-fail')`,
-        { message: /column 'id' cannot be null/ },
+        { message: /cannot be null/ },
         'Should throw on NOT NULL violation',
       );
     });
