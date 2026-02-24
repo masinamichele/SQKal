@@ -116,7 +116,7 @@ export class QueryParser extends BaseParser {
 
     while (this.hasMoreTokens()) {
       const token = this.peek();
-      if (token.type === 'IDENTIFIER' && terminatingKeywords.has(token.value)) {
+      if (token.type === 'KEYWORD' && terminatingKeywords.has(token.value)) {
         break;
       }
       expressionTokens.push(this.consume());

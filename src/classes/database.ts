@@ -1,6 +1,6 @@
 import { DiskManager } from './storage/disk-manager.js';
 import { Catalog, Schema } from './table/catalog.js';
-import { BUFFER_POOL_SIZE, CATALOG, FSM, PAGE_DIRECTORY, PAGE_SIZE } from '../const.js';
+import { BUFFER_POOL_SIZE, CATALOG, FSM, PAGE_SIZE } from '../const.js';
 import { BufferPoolManager } from './storage/buffer-pool-manager.js';
 import { QueryParser } from './query/parser.js';
 import { QueryRunner } from './query/runner.js';
@@ -71,6 +71,7 @@ export class Database {
     if (!command) {
       throw new Error(`Invalid query: '${query}'`);
     }
+    console.log('>', query);
     return this.queryRunner.run(command);
   }
 }

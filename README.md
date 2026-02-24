@@ -1,4 +1,4 @@
-# SQKal - A Simple SQL Engine
+# SQKal - A Simple SQL Database Engine
 
 SQKal is an educational SQL database engine built from scratch in TypeScript, running on Node.js. It is designed to demonstrate the core principles of database architecture with zero external dependencies.
 
@@ -8,10 +8,11 @@ SQKal implements several key components of a traditional database management sys
 
 ### Strengths & Architecture
 
-*   **Layered Design:** The engine features a clean separation between the storage layer, the in-memory buffer manager, and the query processor.
+*   **Layered Design:** The engine features a clean separation between the storage, catalog, and query processing layers.
 
 *   **Efficient Storage Engine:**
     *   **Page-Based:** The database file is organized into fixed-size pages for efficient I/O.
+    *   **Data Compression:** Data pages are compressed on disk using Brotli to minimize file size, with a `PageDirectory` to manage variable-sized pages.
     *   **Slotted Pages:** Implements a slotted page structure, allowing for efficient row insertion, deletion, and space management without fragmentation.
 
 *   **Intelligent Buffer Management:**
@@ -19,28 +20,35 @@ SQKal implements several key components of a traditional database management sys
     *   Implements the **LRU (Least Recently Used)** page replacement policy to intelligently manage the cache.
     *   Uses a **pinning mechanism** to prevent critical, in-use pages from being evicted.
 
-*   **Robust Query Processor:**
-    *   Features a hand-written, two-stage parser (**Tokenizer -> AST Builder**) for robust and extensible SQL parsing.
-    *   Supports `CREATE TABLE`, `INSERT`, `SELECT` (with `*` and column projection), and `DELETE` commands.
-    *   Includes support for simple `WHERE` clauses (`=`).
+*   **Advanced Query Processor:**
+    *   Features a hand-written, **predictive parser** with a stateful scanner that can be guided by the parser, enabling robust and extensible SQL parsing.
+    *   Supports `CREATE TABLE`, `INSERT` (with multi-row syntax), `SELECT`, `UPDATE`, and `DELETE` commands.
+    *   Includes a powerful `WHERE` clause that supports **`AND`/`OR` conjunctions**, **parentheses for grouping**, and a full range of operators (`=`, `<>`, `<`, `>`, `<=`, `>=`, `LIKE`, `IS NULL`, `IS NOT NULL`).
+    *   Supports `ORDER BY` and `LIMIT`/`OFFSET` for `SELECT` statements.
 
 *   **Self-Contained Metadata:**
-    *   Table schemas are stored in a compact, binary format within the database itself in a dedicated **Catalog**, making the engine fully self-describing.
+    *   Table schemas, including `NOT NULL` constraints, are stored in a compact, binary format within the database itself in a dedicated **Catalog**.
 
 ## Usage Example
 
 ```typescript
 import { Database } from './dist/classes/database.js';
+import { join } from 'node:path';
 
-const db = new Database('./mydb.db');
+// Get a singleton instance of the database
+const db = Database.getInstance(join(import.meta.dirname, '../db/main.db'));
 await db.open();
 
-// Create a table, insert data, and query it
-await db.query('CREATE TABLE users (id INT, name VARCHAR)');
-await db.query("INSERT INTO users VALUES (1, 'Alice')");
-const users = await db.query('SELECT * FROM users WHERE id = 1');
+// Create a table with constraints
+await db.exec`CREATE TABLE users (id INT, name VARCHAR NOT NULL)`;
 
-console.log(users); // Output: [{ id: 1, name: 'Alice' }]
+// Insert multiple rows at once
+await db.exec`INSERT INTO users VALUES (1, 'Alice'), (2, 'Bob'), (3, 'Charlie')`;
+
+// Execute a complex query
+const users = await db.exec`SELECT name FROM users WHERE (id > 1 AND name LIKE 'B%') OR name = 'Charlie' ORDER BY name DESC`;
+
+console.log(users); // Output: [{ name: 'Charlie' }, { name: 'Bob' }]
 
 await db.close();
 ```
