@@ -7,6 +7,7 @@ import {
   PAGE_SLOT_SIZE,
   sizeof_uint16,
 } from '../../const.js';
+import { Exception } from '../common/errors.js';
 
 export class Page {
   constructor(
@@ -73,7 +74,7 @@ export class Page {
 
     const maxRowSize = PAGE_SIZE - PAGE_HEADER_SIZE - PAGE_SLOT_SIZE;
     if (size > maxRowSize) {
-      throw new RangeError(`Row of size ${size} exceeds the maximum allowed size of ${maxRowSize}`);
+      throw new Exception('E404', `size: ${size}, maximum allowed size: ${maxRowSize}`);
     }
 
     let targetSlotIndex = -1;
@@ -108,7 +109,7 @@ export class Page {
 
   getRow(index: number) {
     if (index < 0 || index >= this.rowCount) {
-      throw new RangeError(`Row index ${index} out of bounds`);
+      throw new Exception('E403', `Row index ${index} out of bounds`);
     }
     const { offset, length } = this.getSlot(index);
     if (!length) return null;
@@ -118,7 +119,7 @@ export class Page {
 
   deleteRow(index: number) {
     if (index < 0 || index >= this.rowCount) {
-      throw new RangeError(`Row index ${index} out of bounds`);
+      throw new Exception('E403', `Row index ${index} out of bounds`);
     }
     const { length, offset } = this.getSlot(index);
     if (length === 0) return;

@@ -1,5 +1,6 @@
 import { BaseParser } from './base-parser.js';
 import { ConditionNode, Token, TokenType, WhereClause } from './types.js';
+import { Exception } from '../common/errors.js';
 
 const PRECEDENCE = <const>{ OR: 1, AND: 2 };
 
@@ -72,9 +73,9 @@ export class ExpressionParser extends BaseParser {
 
     const value = this._parseTypedValue();
     if (value != null && (operator === 'IS' || operator === 'IS NOT')) {
-      throw new Error(`Operator ${operator} only supports NULL`);
+      throw new Exception('E204', operator);
     } else if (value == null && !(operator === 'IS' || operator === 'IS NOT')) {
-      throw new Error(`Operator ${operator} cannot be used with NULL`);
+      throw new Exception('E205', operator);
     }
 
     return { type: 'CONDITION', field, operator, value };

@@ -17,6 +17,7 @@ import { Injector } from '../injector.js';
 import { Buffer } from 'node:buffer';
 import { Table } from '../table/table.js';
 import { Schema } from '../table/catalog.js';
+import { Exception } from '../common/errors.js';
 
 export class QueryRunner {
   private readonly injector = Injector.getInstance();
@@ -37,7 +38,7 @@ export class QueryRunner {
       case 'UPDATE':
         return this.handleUpdate(command);
       default:
-        throw new Error(`Unknown command '${(command as any)?.type}'`);
+        throw new Exception('E203', (command as any)?.type);
     }
   }
 
@@ -47,10 +48,10 @@ export class QueryRunner {
       this.database.getSchema(command.tableName),
     ]);
     if (!table) {
-      throw new Error(`Table '${command.tableName}' not found.`);
+      throw new Exception('E200', command.tableName);
     }
     if (!schema) {
-      throw new Error(`Schema for table '${command.tableName}' not found.`);
+      throw new Exception('E202', command.tableName);
     }
     return { table, schema };
   }
@@ -94,7 +95,7 @@ export class QueryRunner {
       case 'IS NOT':
         return rowValue != null;
       default:
-        throw new Error(`Unknown operator '${operator}' in WHERE clause`);
+        throw new Exception('E111', `'${operator}' in WHERE clause`);
     }
   }
 
@@ -111,7 +112,7 @@ export class QueryRunner {
     for await (const { buffer } of table.scan()) {
       const rowObject = Serializer.deserialize(buffer, schema);
       if (rowObject[columnName] === value) {
-        throw new Error(`Constraint violation: UNIQUE constraint failed for ${columnName}: ${value}`);
+        throw new Exception('E301', `${columnName}: ${value}`);
       }
     }
   }
@@ -123,7 +124,7 @@ export class QueryRunner {
     if (where.type === 'LOGICAL') {
       return this._evaluateLogicalNode(rowObject, where);
     }
-    throw new Error('Invalid WHERE clause structure');
+    throw new Exception('E112');
   }
 
   private async handleInsert(command: InsertCommand) {
@@ -159,15 +160,13 @@ export class QueryRunner {
         const value = data[column.name];
 
         if (!column.nullable && value == null) {
-          throw new Error(`Constraint violation: column '${column.name}' cannot be null`);
+          throw new Exception('E300', column.name);
         }
         if (value != null && column.unique) {
           await this._checkUniqueness(table, schema, column.name, value);
           const duplicatesInBatch = rowsToInsert.filter((r) => r[column.name] === value);
           if (duplicatesInBatch.length > 1) {
-            throw new Error(
-              `Constraint violation: UNIQUE constraint failed for ${column.name}: ${value} (duplicate value in same insert)`,
-            );
+            throw new Exception('E202', `${column.name}: ${value}`);
           }
         }
       }
@@ -279,7 +278,7 @@ export class QueryRunner {
       for (const column of schema) {
         const value = newRow[column.name];
         if (!column.nullable && value == null) {
-          throw new Error(`Constraint violation: Column '${column.name}' cannot be null.`);
+          throw new Exception('E200', column.name);
         }
       }
 

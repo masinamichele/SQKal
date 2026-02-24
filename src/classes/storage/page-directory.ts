@@ -1,5 +1,6 @@
 import { Buffer } from 'node:buffer';
 import { PAGE_SIZE, sizeof_uint32 } from '../../const.js';
+import { Exception } from '../common/errors.js';
 
 export type PageLocation = {
   offset: number;
@@ -16,7 +17,7 @@ export class PageDirectory extends Map<number, PageLocation> {
 
     for (const [pageId, location] of this.entries()) {
       if (offset + 3 * sizeof_uint32 > PAGE_SIZE) {
-        throw new Error('PageDirectory overflow');
+        throw new Exception('E405');
       }
       buffer.writeUint32BE(pageId, offset);
       offset += sizeof_uint32;

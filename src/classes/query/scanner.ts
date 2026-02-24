@@ -1,4 +1,5 @@
 import { Token, TokenType } from './types.js';
+import { Exception } from '../common/errors.js';
 
 export const RESERVED_WORDS = new Map<string, TokenType>([
   // Multi-word Keywords
@@ -91,10 +92,8 @@ export class Scanner {
     }
 
     const hintMessage = hint ? ` (hint: ${hint})` : '';
-    let errorMessage = `Syntax error: Unexpected token '${this.char}' at position ${this.cursor}${hintMessage}`;
-    errorMessage += `\n${this.query}`;
-    errorMessage += `\n${' '.repeat(this.cursor)}^`;
-    throw new Error(errorMessage);
+    const details = `Syntax error: Unexpected token '${this.char}' at position ${this.cursor}${hintMessage}`;
+    throw new Exception('E104', details);
   }
 
   private _skipWhitespace() {
@@ -143,7 +142,7 @@ export class Scanner {
       this.cursor++;
     }
     if (this.char !== "'") {
-      throw new Error(`Syntax error: Unterminated string literal`);
+      throw new Exception('E105');
     }
     this.cursor++;
     return { type: 'STRING', value };

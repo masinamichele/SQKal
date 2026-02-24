@@ -5,6 +5,7 @@ import { Table } from './table.js';
 import { BufferPoolManager } from '../storage/buffer-pool-manager.js';
 import { FreeSpaceMap } from '../storage/free-space-map.js';
 import { Injector } from '../injector.js';
+import { Exception } from '../common/errors.js';
 
 export enum DataType {
   NUMBER = 0x01,
@@ -101,7 +102,7 @@ export class Catalog {
 
   async createTable(tableName: string, schema: Schema) {
     if ((await this.getTable(tableName)) !== null) {
-      throw new Error(`Table '${tableName}' already exists`);
+      throw new Exception('E201', tableName);
     }
 
     const { pageId, buffer } = await this.bpm.newPage();

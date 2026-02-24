@@ -17,6 +17,7 @@ import { Scanner } from './scanner.js';
 import { Column, DataType, Schema } from '../table/catalog.js';
 import { BaseParser } from './base-parser.js';
 import { ExpressionParser } from './expression-parser.js';
+import { Exception } from '../common/errors.js';
 
 export class QueryParser extends BaseParser {
   private scanner: Generator<Token>;
@@ -90,7 +91,7 @@ export class QueryParser extends BaseParser {
         type = DataType.STRING;
         break;
       default:
-        throw new Error(`Unknown column type: ${typeToken}`);
+        throw new Exception('E103', typeToken);
     }
 
     const column: Column = {
@@ -121,7 +122,7 @@ export class QueryParser extends BaseParser {
         case 'PRIMARY KEY':
           this.consume({ type: 'KEYWORD', value: 'PRIMARY KEY' });
           if (nullableExplicitlySet && column.nullable) {
-            throw new Error(`Syntax error: Column '${name}' with PRIMARY KEY constraint cannot be nullable`);
+            throw new Exception('E109', name);
           }
           column.primaryKey = true;
           column.nullable = false;
@@ -139,10 +140,10 @@ export class QueryParser extends BaseParser {
     }
 
     if (column.autoIncrement && (!column.primaryKey || column.type !== DataType.NUMBER)) {
-      throw new Error('AUTOINCREMENT can only be used on an INTEGER PRIMARY KEY column.');
+      throw new Exception('E107');
     }
     if (column.primaryKey && column.nullable) {
-      throw new Error('PRIMARY KEY columns cannot be nullable.');
+      throw new Exception('E108');
     }
 
     return column;
@@ -163,7 +164,7 @@ export class QueryParser extends BaseParser {
     }
 
     if (!expressionTokens.length) {
-      throw new Error('Syntax error: Unexpected end of query after WHERE clause');
+      throw new Exception('E100', 'After WHERE clause');
     }
 
     return new ExpressionParser(expressionTokens).parse();

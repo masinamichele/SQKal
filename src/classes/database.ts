@@ -10,6 +10,7 @@ import { Buffer } from 'node:buffer';
 import { isAbsolute, join, dirname } from 'node:path';
 import { rmSync } from 'node:fs';
 import { Archiver } from './common/archiver.js';
+import { Exception } from './common/errors.js';
 
 type DatabaseOptions = Partial<{
   clean: boolean;
@@ -33,7 +34,7 @@ export class Database {
     { clean = false, compression = 'brotli' }: DatabaseOptions,
   ) {
     if (databaseCreated) {
-      throw new Error('Only one instance of Database may exist');
+      throw new Exception('E410');
     }
     if (!isAbsolute(this.path)) {
       this.path = join(dirname(process.env.npm_package_json), 'db', this.path);
@@ -91,7 +92,7 @@ export class Database {
   async exec([query]: TemplateStringsArray) {
     const command = this.queryParser.parse(query);
     if (!command) {
-      throw new Error(`Invalid query: '${query}'`);
+      throw new Exception('E113', query);
     }
     console.log('>', query);
     return this.queryRunner.run(command);

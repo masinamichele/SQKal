@@ -5,6 +5,7 @@ import { CATALOG, FSM, PAGE_DIRECTORY, PAGE_SIZE } from '../../const.js';
 import { PageDirectory, PageLocation } from './page-directory.js';
 import { Archiver } from '../common/archiver.js';
 import { Injector } from '../injector.js';
+import { Exception } from '../common/errors.js';
 
 const RESERVED_PAGES = new Set([CATALOG, FSM, PAGE_DIRECTORY]);
 
@@ -69,7 +70,7 @@ export class DiskManager {
       }
     } else {
       const location = this.pageDirectory.get(id);
-      if (!location) throw new Error(`Page ${id} not found`);
+      if (!location) throw new Exception('E400', id);
 
       const compressedBuffer = Buffer.alloc(location.length);
       await this.handle.read(compressedBuffer, 0, location.length, location.offset);

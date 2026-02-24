@@ -1,4 +1,5 @@
 import { Token, TokenType } from './types.js';
+import { Exception } from '../common/errors.js';
 
 export abstract class BaseParser {
   protected lookahead: Token = null;
@@ -9,12 +10,12 @@ export abstract class BaseParser {
 
   protected consume({ type, value }: { type?: TokenType; value?: string } = {}) {
     const token = this.lookahead;
-    if (!token) throw new Error(`Unexpected end of query`);
+    if (!token) throw new Exception('E100');
     if (type && token.type !== type) {
-      throw new Error(`Unexpected token type: ${token.type}(${token.value}) instead of ${type}(_)`);
+      throw new Exception('E101', `${token.type}(${token.value}) instead of ${type}(_)`);
     }
     if (value && token.value !== value) {
-      throw new Error(`Unexpected token value: ${token.type}(${token.value}) instead of _(${value})`);
+      throw new Exception('E102', `${token.type}(${token.value}) instead of _(${value})`);
     }
     return token;
   }
@@ -32,7 +33,7 @@ export abstract class BaseParser {
     } else if (token.type === 'KEYWORD' && token.value === 'NULL') {
       return null;
     } else {
-      throw new Error(`Expected NUMBER or STRING in value list, but got ${token.type} (${token.value})`);
+      throw new Exception('E106', `Got ${token.type} (${token.value})`);
     }
   }
 }

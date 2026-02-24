@@ -3,6 +3,7 @@ import { DiskManager } from './disk-manager.js';
 import { PAGE_SIZE } from '../../const.js';
 import { DoublyLinkedList } from '../common/doubly-linked-list.js';
 import { Injector } from '../injector.js';
+import { Exception } from '../common/errors.js';
 
 export class BufferPoolManager {
   private readonly pool: Buffer[] = [];
@@ -36,7 +37,9 @@ export class BufferPoolManager {
       }
     }
 
-    if (victimFrameId == null) return null;
+    if (victimFrameId == null) {
+      throw new Exception('E402');
+    }
 
     if (this.frameToPage.has(victimFrameId)) {
       const evictedPageId = this.frameToPage.get(victimFrameId);
@@ -91,7 +94,6 @@ export class BufferPoolManager {
   async newPage() {
     const { pageId } = await this.diskManager.allocatePage();
     const frameId = await this.findVictimFrame();
-    if (frameId == null) return null;
     const pageBuffer = this.pool[frameId];
     pageBuffer.fill(0);
     this.setupFrameMetadata(pageId, frameId);
