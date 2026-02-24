@@ -29,6 +29,7 @@ const ERROR_DEFINITIONS = <const>{
   E300: 'Column cannot be null',
   E301: 'UNIQUE constraint failed',
   E302: 'Duplicate value in same insert',
+  E303: 'Invalid data type for column',
 
   // Internal Errors (E4xx)
   E400: 'Page not found in directory',
@@ -50,12 +51,11 @@ export class Exception extends Error {
     details?: string | number,
   ) {
     const description = ERROR_DEFINITIONS[code];
-    const type = ERROR_TYPES[+code[1] - 1];
-    const name = `${type}Error`;
-    let message = `[${name}] ${code}: ${description}`;
-    if (details) message += ` - ${details}`;
+    let message = `${code} ${description}`;
+    if (details) message += ` | ${details}`;
     super(message);
-    this.name = name;
+    const type = ERROR_TYPES[+code[1] - 1];
+    this.name = `${type}Error`;
 
     Object.setPrototypeOf(this, Exception.prototype);
   }

@@ -16,7 +16,7 @@ import { Page } from '../storage/page.js';
 import { Injector } from '../injector.js';
 import { Buffer } from 'node:buffer';
 import { Table } from '../table/table.js';
-import { Schema } from '../table/catalog.js';
+import { Column, DataType, Schema } from '../table/catalog.js';
 import { Exception } from '../common/errors.js';
 
 export class QueryRunner {
@@ -117,6 +117,24 @@ export class QueryRunner {
     }
   }
 
+  private _validateValueType(value: any, column: Column): void {
+    if (value === null) return;
+
+    let expected: string;
+    switch (column.type) {
+      case DataType.NUMBER:
+        expected = 'number';
+        break;
+      case DataType.STRING:
+        expected = 'string';
+        break;
+    }
+
+    if (typeof value !== expected) {
+      throw new Exception('E303', `Expected ${expected}, but got ${typeof value} in ${column.name}`);
+    }
+  }
+
   private matches(rowObject: Record<string, any>, where: WhereClause): boolean {
     if (where.type === 'CONDITION') {
       return this._evaluateConditionNode(rowObject, where);
@@ -150,6 +168,7 @@ export class QueryRunner {
         if (column.autoIncrement && value == null) {
           value = nextAutoIncrementId++;
         }
+        this._validateValueType(value, column);
         data[column.name] = value;
       }
       rowsToInsert.push(data);
@@ -260,6 +279,11 @@ export class QueryRunner {
 
   private async handleUpdate(command: UpdateCommand) {
     const { table, schema } = await this.getCommandEntities(command);
+
+    for (const [fieldName, newValue] of Object.entries(command.set)) {
+      const column = schema.find((c) => c.name === fieldName);
+      if (column) this._validateValueType(newValue, column);
+    }
 
     // TODO: enforce column constraints
 

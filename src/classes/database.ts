@@ -94,7 +94,7 @@ export class Database {
     if (!command) {
       throw new Exception('E113', query);
     }
-    console.log('>', query);
+    console.log('>', query.replaceAll('\n', ' ').replaceAll(/\s{2,}/g, ' '));
     return this.queryRunner.run(command);
   }
 }
