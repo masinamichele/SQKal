@@ -49,6 +49,10 @@ This file tracks the implementation progress of our database engine.
 - **Production-Grade Features**
   - [ ] **Concurrency Control:** Implement a locking mechanism (e.g., page-level or row-level locks).
   - [ ] **Transactions:** Implement ACID-compliant transactions with `BEGIN`, `COMMIT`, and `ROLLBACK`.
+    - [ ] **Design:** Use a Copy-on-Write (CoW) strategy at the page level to avoid a complex Write-Ahead Log (WAL).
+    - [ ] **`BufferPoolManager`:** Modify to create page copies for writes within a transaction.
+    - [ ] **`QueryRunner`:** Implement `BEGIN`, `COMMIT`, and `ROLLBACK` commands.
+    - [ ] **`DiskManager`:** Implement atomic commit by updating the `PageDirectory`.
   - [ ] **Advanced Indexing:** Design and implement a B+ Tree index structure.
 
 - **Vacuum / Space Reclamation**
